@@ -33,14 +33,14 @@
 #      maxRetries: 3
 #      operationTimeoutMilliseconds: 500
 #
-#authority:
-#  users:
-#    - user: root@%
-#      password: root
-#    - user: sharding
-#      password: sharding
-#  privilege:
-#    type: ALL_PERMITTED
+authority:
+  users:
+    - user: root@%
+      password: 1234
+    - user: sharding
+      password: sharding
+  privilege:
+    type: ALL_PERMITTED
 #
 #transaction:
 #  defaultType: XA
@@ -55,13 +55,13 @@
 #    initialCapacity: 128
 #    maximumSize: 1024
 #
-#logging:
-#  loggers:
-#  - loggerName: ShardingSphere-SQL
-#    additivity: true
-#    level: INFO
-#    props:
-#      enable: false
+logging:
+  loggers:
+  - loggerName: ShardingSphere-SQL
+    additivity: true
+    level: DEBUG
+    props:
+      enable: false
 #
 #sqlFederation:
 #  sqlFederationEnabled: false

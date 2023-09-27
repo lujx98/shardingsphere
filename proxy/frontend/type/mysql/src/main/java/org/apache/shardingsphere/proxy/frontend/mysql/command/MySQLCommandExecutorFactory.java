@@ -73,6 +73,9 @@ public final class MySQLCommandExecutorFactory {
         } else {
             log.debug("Execute packet type: {}", commandPacketType);
         }
+        if (commandPacket instanceof SQLReceivedPacket){
+            log.warn(((SQLReceivedPacket) commandPacket).getSQL());
+        }
         switch (commandPacketType) {
             case COM_QUIT:
                 return new MySQLComQuitExecutor();

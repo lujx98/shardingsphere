@@ -106,7 +106,7 @@ public final class MySQLAdminExecutorCreator implements DatabaseAdminExecutorCre
             return Optional.of(new MySQLSetVariableAdminExecutor((SetStatement) sqlStatement));
         }
         if (sqlStatement instanceof SelectStatement) {
-            return create((SelectStatement) sqlStatement, sql, databaseName, parameters);
+//            return create((SelectStatement) sqlStatement, sql, databaseName, parameters);
         }
         return Optional.empty();
     }
