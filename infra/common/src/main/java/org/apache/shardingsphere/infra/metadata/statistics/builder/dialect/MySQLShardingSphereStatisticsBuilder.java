@@ -28,21 +28,27 @@ import org.apache.shardingsphere.infra.metadata.statistics.builder.ShardingSpher
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereTable;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * ShardingSphere statistics builder for MySQL.
  */
 
 public final class MySQLShardingSphereStatisticsBuilder implements ShardingSphereStatisticsBuilder {
-
+    
     private static final Set<String> CURRENT_SUPPORT = new HashSet<>(Arrays.asList("PARAMETERS"));
-
+    
     private static final String SHARDING_SPHERE = "shardingsphere";
+    
     private static final String INFORMATION_SCHEMA = "information_schema";
+    
     private static final String CLUSTER_INFORMATION = "cluster_information";
-
+    
     @Override
     public ShardingSphereStatistics build(final ShardingSphereMetaData metaData) {
         ShardingSphereStatistics result = new ShardingSphereStatistics();
@@ -60,7 +66,7 @@ public final class MySQLShardingSphereStatisticsBuilder implements ShardingSpher
             databaseData.getSchemaData().put(SHARDING_SPHERE, schemaData);
             result.getDatabaseData().put(SHARDING_SPHERE, databaseData);
         }
-
+        
         Optional<ShardingSphereSchema> informationSchemaSchema = Optional.ofNullable(metaData.getDatabase("information_schema")).map(database -> database.getSchema("information_schema"));
         if (informationSchemaSchema.isPresent()) {
             ShardingSphereSchemaData schemaData = new ShardingSphereSchemaData();
@@ -75,10 +81,10 @@ public final class MySQLShardingSphereStatisticsBuilder implements ShardingSpher
             informationSchemaResult.getSchemaData().put(INFORMATION_SCHEMA, schemaData);
             result.getDatabaseData().put(INFORMATION_SCHEMA, informationSchemaResult);
         }
-
+        
         return result;
     }
-
+    
     @Override
     public String getDatabaseType() {
         return "MySQL";
