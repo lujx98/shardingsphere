@@ -122,7 +122,7 @@ public abstract class SQLRewriterIT {
         DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, testParams.getDatabaseType());
         Map<String, StorageUnit> storageUnits = createStorageUnits(databaseConfig, databaseType);
         ResourceMetaData resourceMetaData = mock(ResourceMetaData.class, RETURNS_DEEP_STUBS);
-        when(resourceMetaData.getStorageUnitMetaData().getStorageUnits()).thenReturn(storageUnits);
+        when(resourceMetaData.getStorageUnits()).thenReturn(storageUnits);
         String schemaName = new DatabaseTypeRegistry(databaseType).getDefaultSchemaName(DefaultDatabase.LOGIC_NAME);
         SQLStatementParserEngine sqlStatementParserEngine = new SQLStatementParserEngine(TypedSPILoader.getService(DatabaseType.class, testParams.getDatabaseType()),
                 sqlParserRule.getSqlStatementCache(), sqlParserRule.getParseTreeCache(), sqlParserRule.isSqlCommentParseEnabled());
@@ -173,7 +173,7 @@ public abstract class SQLRewriterIT {
     private Map<String, StorageUnit> createStorageUnits(final DatabaseConfiguration databaseConfig, final DatabaseType databaseType) {
         Map<String, StorageUnit> result = new LinkedHashMap<>(databaseConfig.getDataSources().size(), 1F);
         for (Entry<String, DataSource> entry : databaseConfig.getDataSources().entrySet()) {
-            StorageUnit storageUnit = mock(StorageUnit.class);
+            StorageUnit storageUnit = mock(StorageUnit.class, RETURNS_DEEP_STUBS);
             when(storageUnit.getStorageType()).thenReturn(databaseType);
             result.put(entry.getKey(), storageUnit);
         }
