@@ -1,6 +1,6 @@
 +++
 title = "Row Value Expressions"
-weight = 8
+weight = 10
 +++
 
 ## Row Value Expressions that uses the Groovy syntax
@@ -107,5 +107,5 @@ rules:
 
 ## Related References
 
-- [Core Concept](/docs/document/content/features/sharding/concept.en.md)
-- [Data Sharding](/docs/document/content/dev-manual/sharding.en.md)
+- [Core Concept](/en/features/sharding/concept)
+- [Data Sharding](/en/dev-manual/sharding)
