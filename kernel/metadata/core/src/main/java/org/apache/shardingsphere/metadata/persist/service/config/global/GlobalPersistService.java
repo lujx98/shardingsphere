@@ -18,11 +18,9 @@
 package org.apache.shardingsphere.metadata.persist.service.config.global;
 
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
-import org.apache.shardingsphere.infra.metadata.user.ShardingSphereUser;
 import org.apache.shardingsphere.infra.metadata.version.MetaDataVersion;
 
 import java.util.Collection;
-import java.util.Collections;
 
 /**
  * Global persist service.
@@ -59,17 +57,7 @@ public interface GlobalPersistService<T> {
      * @param ruleName rule name
      * @return single rule configuration
      */
-    default RuleConfiguration load(String ruleName) {
+    default RuleConfiguration load(final String ruleName) {
         return null;
-    }
-    
-    /**
-     * TODO remove this after meta data refactor completed 
-     * Load all users.
-     *
-     * @return collection of user
-     */
-    default Collection<ShardingSphereUser> loadUsers() {
-        return Collections.emptyList();
     }
 }
