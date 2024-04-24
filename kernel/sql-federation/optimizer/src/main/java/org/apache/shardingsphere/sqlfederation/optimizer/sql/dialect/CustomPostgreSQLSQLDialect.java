@@ -15,23 +15,26 @@
  * limitations under the License.
  */
 
-package org.apache.shardingsphere.infra.rewrite.sql.impl;
+package org.apache.shardingsphere.sqlfederation.optimizer.sql.dialect;
 
-import org.apache.shardingsphere.infra.rewrite.sql.token.pojo.SQLToken;
-
-import java.util.List;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 
 /**
- * Default SQL builder.
+ * Custom PostgreSQL SQL dialect.
  */
-public final class DefaultSQLBuilder extends AbstractSQLBuilder {
+public final class CustomPostgreSQLSQLDialect extends PostgresqlSqlDialect {
     
-    public DefaultSQLBuilder(final String sql, final List<SQLToken> sqlTokens) {
-        super(sql, sqlTokens, null);
+    public static final SqlDialect DEFAULT = new CustomPostgreSQLSQLDialect(DEFAULT_CONTEXT);
+    
+    public CustomPostgreSQLSQLDialect(final Context context) {
+        super(context);
     }
     
     @Override
-    protected String getSQLTokenText(final SQLToken sqlToken) {
-        return sqlToken.toString();
+    public void quoteStringLiteral(final StringBuilder builder, final String charsetName, final String value) {
+        builder.append(literalQuoteString);
+        builder.append(value.replace(literalEndQuoteString, literalEscapedQuote));
+        builder.append(literalEndQuoteString);
     }
 }

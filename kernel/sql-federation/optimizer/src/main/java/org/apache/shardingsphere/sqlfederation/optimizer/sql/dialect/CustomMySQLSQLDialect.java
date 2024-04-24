@@ -15,23 +15,26 @@
  * limitations under the License.
  */
 
-package org.apache.shardingsphere.infra.rewrite.sql.impl;
+package org.apache.shardingsphere.sqlfederation.optimizer.sql.dialect;
 
-import org.apache.shardingsphere.infra.rewrite.sql.token.pojo.SQLToken;
-
-import java.util.List;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 
 /**
- * Default SQL builder.
+ * Custom MySQL SQL dialect.
  */
-public final class DefaultSQLBuilder extends AbstractSQLBuilder {
+public final class CustomMySQLSQLDialect extends MysqlSqlDialect {
     
-    public DefaultSQLBuilder(final String sql, final List<SQLToken> sqlTokens) {
-        super(sql, sqlTokens, null);
+    public static final SqlDialect DEFAULT = new CustomMySQLSQLDialect(DEFAULT_CONTEXT);
+    
+    public CustomMySQLSQLDialect(final Context context) {
+        super(context);
     }
     
     @Override
-    protected String getSQLTokenText(final SQLToken sqlToken) {
-        return sqlToken.toString();
+    public void quoteStringLiteral(final StringBuilder builder, final String charsetName, final String value) {
+        builder.append(literalQuoteString);
+        builder.append(value.replace(literalEndQuoteString, literalEscapedQuote));
+        builder.append(literalEndQuoteString);
     }
 }
