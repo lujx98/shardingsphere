@@ -29,7 +29,6 @@ import org.apache.shardingsphere.test.e2e.env.container.atomic.governance.Govern
 import org.apache.shardingsphere.test.e2e.env.container.atomic.governance.impl.ZookeeperContainer;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.storage.DockerStorageContainer;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.storage.StorageContainerFactory;
-import org.apache.shardingsphere.test.e2e.env.runtime.DataSourceEnvironment;
 import org.apache.shardingsphere.test.e2e.transaction.framework.container.config.StorageContainerConfigurationFactory;
 import org.apache.shardingsphere.test.e2e.transaction.framework.container.config.proxy.ProxyClusterContainerConfigurationFactory;
 import org.apache.shardingsphere.test.e2e.transaction.framework.container.jdbc.ShardingSphereJDBCContainer;
@@ -57,14 +56,14 @@ public final class DockerContainerComposer extends BaseContainerComposer {
     
     public DockerContainerComposer(final TransactionTestParameter testParam) {
         super(testParam.getScenario());
-        this.databaseType = testParam.getDatabaseType();
+        databaseType = testParam.getDatabaseType();
         governanceContainer = getContainers().registerContainer(new ZookeeperContainer());
         storageContainer = getContainers().registerContainer((DockerStorageContainer) StorageContainerFactory.newInstance(databaseType, testParam.getStorageContainerImage(),
                 StorageContainerConfigurationFactory.newInstance(databaseType, testParam.getScenario())));
         if (AdapterType.PROXY.getValue().equalsIgnoreCase(testParam.getAdapter())) {
             jdbcContainer = null;
             proxyContainer = (ShardingSphereProxyClusterContainer) AdapterContainerFactory.newInstance(AdapterMode.CLUSTER, AdapterType.PROXY,
-                    databaseType, storageContainer, testParam.getScenario(), ProxyClusterContainerConfigurationFactory.newInstance(testParam.getScenario(), databaseType));
+                    databaseType, storageContainer, testParam.getScenario(), ProxyClusterContainerConfigurationFactory.newInstance(testParam.getScenario(), databaseType, testParam.getPortBindings()));
             proxyContainer.dependsOn(governanceContainer, storageContainer);
             getContainers().registerContainer(proxyContainer);
         } else {
@@ -110,10 +109,5 @@ public final class DockerContainerComposer extends BaseContainerComposer {
         if (null != jdbcContainer) {
             jdbcContainer.stop();
         }
-    }
-    
-    @Override
-    public String getProxyJdbcUrl(final String databaseName) {
-        return DataSourceEnvironment.getURL(databaseType, proxyContainer.getHost(), proxyContainer.getFirstMappedPort(), databaseName);
     }
 }

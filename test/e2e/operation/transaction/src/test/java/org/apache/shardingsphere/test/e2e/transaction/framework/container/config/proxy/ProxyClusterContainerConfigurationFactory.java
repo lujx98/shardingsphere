@@ -20,13 +20,12 @@ package org.apache.shardingsphere.test.e2e.transaction.framework.container.confi
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.database.opengauss.type.OpenGaussDatabaseType;
-import org.apache.shardingsphere.infra.database.postgresql.type.PostgreSQLDatabaseType;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.adapter.config.AdaptorContainerConfiguration;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.constants.ProxyContainerConstants;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.util.AdapterContainerUtils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,15 +39,17 @@ public final class ProxyClusterContainerConfigurationFactory {
      *
      * @param scenario scenario
      * @param databaseType database type
+     * @param portBindings port bindings
      * @return created instance
      */
-    public static AdaptorContainerConfiguration newInstance(final String scenario, final DatabaseType databaseType) {
+    public static AdaptorContainerConfiguration newInstance(final String scenario, final DatabaseType databaseType, final List<String> portBindings) {
         String containerCommand = "readwrite-splitting".equals(scenario) ? "-f" : "";
-        return new AdaptorContainerConfiguration(getProxyDatasourceName(databaseType), getMountedResource(scenario, databaseType), AdapterContainerUtils.getAdapterContainerImage(), containerCommand);
+        return new AdaptorContainerConfiguration(getProxyDatasourceName(scenario), portBindings, getMountedResource(scenario, databaseType), AdapterContainerUtils.getAdapterContainerImage(),
+                containerCommand);
     }
     
-    private static String getProxyDatasourceName(final DatabaseType databaseType) {
-        return (databaseType instanceof PostgreSQLDatabaseType || databaseType instanceof OpenGaussDatabaseType) ? "postgres" : "";
+    private static String getProxyDatasourceName(final String scenario) {
+        return "default".equals(scenario) ? "sharding_db" : scenario;
     }
     
     private static Map<String, String> getMountedResource(final String scenario, final DatabaseType databaseType) {

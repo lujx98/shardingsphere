@@ -31,26 +31,26 @@ import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.ColumnAssignmentSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.SetAssignmentSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.ColumnSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.item.ProjectionsSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.pagination.limit.LimitSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.TableNameSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.InsertStatement;
-import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.MySQLStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dml.MySQLInsertStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dml.MySQLSelectStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.opengauss.ddl.OpenGaussCloseStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.opengauss.ddl.OpenGaussCursorStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.opengauss.ddl.OpenGaussFetchStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.opengauss.ddl.OpenGaussMoveStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.oracle.dml.OracleInsertStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.postgresql.dml.PostgreSQLInsertStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sql92.dml.SQL92InsertStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.dml.SQLServerInsertStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.assignment.ColumnAssignmentSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.assignment.SetAssignmentSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.item.ProjectionsSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.pagination.limit.LimitSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.InsertStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
+import org.apache.shardingsphere.sql.parser.statement.mysql.ddl.MySQLAlterDatabaseStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dml.MySQLInsertStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dml.MySQLSelectStatement;
+import org.apache.shardingsphere.sql.parser.statement.opengauss.ddl.OpenGaussCloseStatement;
+import org.apache.shardingsphere.sql.parser.statement.opengauss.ddl.OpenGaussCursorStatement;
+import org.apache.shardingsphere.sql.parser.statement.opengauss.ddl.OpenGaussFetchStatement;
+import org.apache.shardingsphere.sql.parser.statement.opengauss.ddl.OpenGaussMoveStatement;
+import org.apache.shardingsphere.sql.parser.statement.oracle.dml.OracleInsertStatement;
+import org.apache.shardingsphere.sql.parser.statement.postgresql.dml.PostgreSQLInsertStatement;
+import org.apache.shardingsphere.sql.parser.statement.sql92.dml.SQL92InsertStatement;
+import org.apache.shardingsphere.sql.parser.statement.sqlserver.dml.SQLServerInsertStatement;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -114,7 +114,8 @@ class SQLStatementContextFactoryTest {
     
     @Test
     void assertSQLStatementContextCreatedWhenSQLStatementNotInstanceOfSelectStatementAndInsertStatement() {
-        SQLStatementContext sqlStatementContext = new SQLBindEngine(mockMetaData(), DefaultDatabase.LOGIC_NAME, new HintValueContext()).bind(mock(MySQLStatement.class), Collections.emptyList());
+        SQLStatementContext sqlStatementContext = new SQLBindEngine(
+                mockMetaData(), DefaultDatabase.LOGIC_NAME, new HintValueContext()).bind(new MySQLAlterDatabaseStatement(), Collections.emptyList());
         assertThat(sqlStatementContext, instanceOf(CommonSQLStatementContext.class));
     }
     
@@ -123,6 +124,7 @@ class SQLStatementContextFactoryTest {
         OpenGaussCursorStatement cursorStatement = mock(OpenGaussCursorStatement.class, RETURNS_DEEP_STUBS);
         MySQLSelectStatement selectStatement = mock(MySQLSelectStatement.class, RETURNS_DEEP_STUBS);
         when(selectStatement.getProjections().isDistinctRow()).thenReturn(false);
+        when(selectStatement.getProjections().getProjections()).thenReturn(Collections.emptyList());
         when(selectStatement.getCommentSegments()).thenReturn(Collections.emptyList());
         when(cursorStatement.getSelect()).thenReturn(selectStatement);
         when(cursorStatement.getCommentSegments()).thenReturn(Collections.emptyList());
@@ -132,19 +134,19 @@ class SQLStatementContextFactoryTest {
     
     @Test
     void assertNewInstanceForCloseStatement() {
-        SQLStatementContext actual = new SQLBindEngine(mockMetaData(), DefaultDatabase.LOGIC_NAME, new HintValueContext()).bind(mock(OpenGaussCloseStatement.class), Collections.emptyList());
+        SQLStatementContext actual = new SQLBindEngine(mockMetaData(), DefaultDatabase.LOGIC_NAME, new HintValueContext()).bind(new OpenGaussCloseStatement(), Collections.emptyList());
         assertThat(actual, instanceOf(CloseStatementContext.class));
     }
     
     @Test
     void assertNewInstanceForMoveStatement() {
-        SQLStatementContext actual = new SQLBindEngine(mockMetaData(), DefaultDatabase.LOGIC_NAME, new HintValueContext()).bind(mock(OpenGaussMoveStatement.class), Collections.emptyList());
+        SQLStatementContext actual = new SQLBindEngine(mockMetaData(), DefaultDatabase.LOGIC_NAME, new HintValueContext()).bind(new OpenGaussMoveStatement(), Collections.emptyList());
         assertThat(actual, instanceOf(MoveStatementContext.class));
     }
     
     @Test
     void assertNewInstanceForFetchStatement() {
-        SQLStatementContext actual = new SQLBindEngine(mockMetaData(), DefaultDatabase.LOGIC_NAME, new HintValueContext()).bind(mock(OpenGaussFetchStatement.class), Collections.emptyList());
+        SQLStatementContext actual = new SQLBindEngine(mockMetaData(), DefaultDatabase.LOGIC_NAME, new HintValueContext()).bind(new OpenGaussFetchStatement(), Collections.emptyList());
         assertThat(actual, instanceOf(FetchStatementContext.class));
     }
     

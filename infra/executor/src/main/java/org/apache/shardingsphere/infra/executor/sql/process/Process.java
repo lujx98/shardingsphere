@@ -19,6 +19,7 @@ package org.apache.shardingsphere.infra.executor.sql.process;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.apache.shardingsphere.infra.annotation.HighFrequencyInvocation;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroup;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroupContext;
 import org.apache.shardingsphere.infra.executor.sql.context.ExecutionUnit;
@@ -29,6 +30,7 @@ import org.apache.shardingsphere.infra.metadata.user.Grantee;
 import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,11 +38,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Process.
  */
+@HighFrequencyInvocation
 @RequiredArgsConstructor
 @Getter
 public final class Process {
     
-    private final Map<ExecutionUnit, Statement> processStatements = new ConcurrentHashMap<>();
+    private final Map<Integer, Statement> processStatements = new ConcurrentHashMap<>();
     
     private final String id;
     
@@ -54,11 +57,11 @@ public final class Process {
     
     private final String hostname;
     
-    private final int totalUnitCount;
+    private final AtomicInteger totalUnitCount;
     
     private final AtomicInteger completedUnitCount;
     
-    private final boolean idle;
+    private final AtomicBoolean idle;
     
     private final AtomicBoolean interrupted;
     
@@ -75,13 +78,13 @@ public final class Process {
         startMillis = System.currentTimeMillis();
         this.sql = sql;
         databaseName = executionGroupContext.getReportContext().getDatabaseName();
-        Grantee grantee = executionGroupContext.getReportContext().getGrantee();
-        username = null == grantee ? "" : grantee.getUsername();
-        hostname = null == grantee ? "" : grantee.getHostname();
-        totalUnitCount = getTotalUnitCount(executionGroupContext);
+        Optional<Grantee> grantee = executionGroupContext.getReportContext().getGrantee();
+        username = grantee.map(Grantee::getUsername).orElse("");
+        hostname = grantee.map(Grantee::getHostname).orElse("");
+        totalUnitCount = new AtomicInteger(getTotalUnitCount(executionGroupContext));
         processStatements.putAll(createProcessStatements(executionGroupContext));
         completedUnitCount = new AtomicInteger(0);
-        this.idle = idle;
+        this.idle = new AtomicBoolean(idle);
         interrupted = new AtomicBoolean();
     }
     
@@ -93,13 +96,13 @@ public final class Process {
         return result;
     }
     
-    private Map<ExecutionUnit, Statement> createProcessStatements(final ExecutionGroupContext<? extends SQLExecutionUnit> executionGroupContext) {
-        Map<ExecutionUnit, Statement> result = new LinkedHashMap<>();
+    private Map<Integer, Statement> createProcessStatements(final ExecutionGroupContext<? extends SQLExecutionUnit> executionGroupContext) {
+        Map<Integer, Statement> result = new LinkedHashMap<>();
         for (ExecutionGroup<? extends SQLExecutionUnit> each : executionGroupContext.getInputGroups()) {
             for (SQLExecutionUnit executionUnit : each.getInputs()) {
                 if (executionUnit instanceof JDBCExecutionUnit) {
                     JDBCExecutionUnit jdbcExecutionUnit = (JDBCExecutionUnit) executionUnit;
-                    result.put(jdbcExecutionUnit.getExecutionUnit(), jdbcExecutionUnit.getStorageResource());
+                    result.put(System.identityHashCode(jdbcExecutionUnit.getExecutionUnit()), jdbcExecutionUnit.getStorageResource());
                 }
             }
         }
@@ -111,15 +114,6 @@ public final class Process {
      */
     public void completeExecutionUnit() {
         completedUnitCount.incrementAndGet();
-    }
-    
-    /**
-     * Get completed unit count.
-     *
-     * @return completed unit count
-     */
-    public int getCompletedUnitCount() {
-        return completedUnitCount.get();
     }
     
     /**
@@ -141,13 +135,12 @@ public final class Process {
     }
     
     /**
-     * Put process statement.
+     * Is idle.
      *
-     * @param executionUnit execution unit
-     * @param statement statement
+     * @return idle
      */
-    public void putProcessStatement(final ExecutionUnit executionUnit, final Statement statement) {
-        processStatements.put(executionUnit, statement);
+    public boolean isIdle() {
+        return idle.get();
     }
     
     /**
@@ -156,6 +149,6 @@ public final class Process {
      * @param executionUnit execution unit
      */
     public void removeProcessStatement(final ExecutionUnit executionUnit) {
-        processStatements.remove(executionUnit);
+        processStatements.remove(System.identityHashCode(executionUnit));
     }
 }

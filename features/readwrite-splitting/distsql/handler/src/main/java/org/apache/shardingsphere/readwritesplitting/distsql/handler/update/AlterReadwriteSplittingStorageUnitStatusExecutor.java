@@ -28,15 +28,12 @@ import org.apache.shardingsphere.infra.exception.kernel.metadata.rule.MissingReq
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.state.datasource.DataSourceState;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.mode.storage.service.StorageNodeStatusService;
 import org.apache.shardingsphere.readwritesplitting.constant.ReadwriteSplittingDataSourceType;
 import org.apache.shardingsphere.readwritesplitting.distsql.statement.AlterReadwriteSplittingStorageUnitStatusStatement;
 import org.apache.shardingsphere.readwritesplitting.exception.ReadwriteSplittingRuleExceptionIdentifier;
 import org.apache.shardingsphere.readwritesplitting.exception.actual.ReadwriteSplittingActualDataSourceNotFoundException;
-import org.apache.shardingsphere.readwritesplitting.rule.ReadwriteSplittingDataSourceRule;
+import org.apache.shardingsphere.readwritesplitting.rule.ReadwriteSplittingDataSourceGroupRule;
 import org.apache.shardingsphere.readwritesplitting.rule.ReadwriteSplittingRule;
-
-import java.util.Optional;
 
 /**
  * Alter readwrite-splitting storage unit status executor.
@@ -60,24 +57,24 @@ public final class AlterReadwriteSplittingStorageUnitStatusExecutor
     }
     
     private void checkBeforeUpdate(final AlterReadwriteSplittingStorageUnitStatusStatement sqlStatement) {
-        Optional<ReadwriteSplittingDataSourceRule> dataSourceRule = rule.getDataSourceRules().values().stream().filter(each -> each.getName().equalsIgnoreCase(sqlStatement.getRuleName())).findAny();
-        ShardingSpherePreconditions.checkState(dataSourceRule.isPresent(), () -> new MissingRequiredRuleException("Readwrite-splitting", database.getName(), sqlStatement.getRuleName()));
-        ShardingSpherePreconditions.checkContains(dataSourceRule.get().getReadwriteSplittingGroup().getReadDataSources(), sqlStatement.getStorageUnitName(),
-                () -> new ReadwriteSplittingActualDataSourceNotFoundException(
-                        ReadwriteSplittingDataSourceType.READ, sqlStatement.getStorageUnitName(), new ReadwriteSplittingRuleExceptionIdentifier(database.getName(), dataSourceRule.get().getName())));
+        ReadwriteSplittingDataSourceGroupRule dataSourceGroupRule = rule.getDataSourceRuleGroups().values().stream()
+                .filter(each -> each.getName().equalsIgnoreCase(sqlStatement.getRuleName())).findAny()
+                .orElseThrow(() -> new MissingRequiredRuleException("Readwrite-splitting", database.getName(), sqlStatement.getRuleName()));
+        ShardingSpherePreconditions.checkContains(dataSourceGroupRule.getReadwriteSplittingGroup().getReadDataSources(), sqlStatement.getStorageUnitName(),
+                () -> new ReadwriteSplittingActualDataSourceNotFoundException(ReadwriteSplittingDataSourceType.READ,
+                        sqlStatement.getStorageUnitName(), new ReadwriteSplittingRuleExceptionIdentifier(database.getName(), dataSourceGroupRule.getName())));
         if (sqlStatement.isEnable()) {
-            ShardingSpherePreconditions.checkContains(dataSourceRule.get().getDisabledDataSourceNames(), sqlStatement.getStorageUnitName(),
+            ShardingSpherePreconditions.checkContains(dataSourceGroupRule.getDisabledDataSourceNames(), sqlStatement.getStorageUnitName(),
                     () -> new InvalidStorageUnitStatusException("storage unit is not disabled"));
         } else {
-            ShardingSpherePreconditions.checkNotContains(dataSourceRule.get().getDisabledDataSourceNames(), sqlStatement.getStorageUnitName(),
+            ShardingSpherePreconditions.checkNotContains(dataSourceGroupRule.getDisabledDataSourceNames(), sqlStatement.getStorageUnitName(),
                     () -> new InvalidStorageUnitStatusException("storage unit is already disabled"));
         }
     }
     
     private void updateStatus(final ContextManager contextManager, final AlterReadwriteSplittingStorageUnitStatusStatement sqlStatement) {
         DataSourceState status = sqlStatement.isEnable() ? DataSourceState.ENABLED : DataSourceState.DISABLED;
-        new StorageNodeStatusService(contextManager.getMetaDataContexts().getPersistService().getRepository())
-                .changeMemberStorageNodeStatus(database.getName(), sqlStatement.getRuleName(), sqlStatement.getStorageUnitName(), status);
+        contextManager.getPersistServiceFacade().getQualifiedDataSourceStatePersistService().updateState(database.getName(), sqlStatement.getRuleName(), sqlStatement.getStorageUnitName(), status);
     }
     
     @Override

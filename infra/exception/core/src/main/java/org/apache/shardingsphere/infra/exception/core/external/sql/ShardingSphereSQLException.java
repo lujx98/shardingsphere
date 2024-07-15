@@ -43,11 +43,11 @@ public abstract class ShardingSphereSQLException extends ShardingSphereExternalE
     private final Exception cause;
     
     protected ShardingSphereSQLException(final SQLState sqlState, final int typeOffset, final int errorCode, final String reason, final Object... messageArgs) {
-        this(sqlState.getValue(), typeOffset, errorCode, null == reason ? null : String.format(reason, formatMessageArguments(messageArgs)), null);
+        this(sqlState.getValue(), typeOffset, errorCode, formatMessage(reason, messageArgs), null);
     }
     
     protected ShardingSphereSQLException(final SQLState sqlState, final int typeOffset, final int errorCode, final Exception cause, final String reason, final Object... messageArgs) {
-        this(sqlState.getValue(), typeOffset, errorCode, null == reason ? null : String.format(reason, formatMessageArguments(messageArgs)), cause);
+        this(sqlState.getValue(), typeOffset, errorCode, formatMessage(reason, messageArgs), cause);
     }
     
     protected ShardingSphereSQLException(final String sqlState, final int typeOffset, final int errorCode, final String reason, final Exception cause) {
@@ -60,6 +60,16 @@ public abstract class ShardingSphereSQLException extends ShardingSphereExternalE
         this.cause = cause;
     }
     
+    private static String formatMessage(final String reason, final Object[] messageArgs) {
+        if (null == reason) {
+            return null;
+        }
+        if (0 == messageArgs.length) {
+            return reason;
+        }
+        return String.format(reason, formatMessageArguments(messageArgs));
+    }
+    
     private static Object[] formatMessageArguments(final Object... messageArgs) {
         return Arrays.stream(messageArgs)
                 .map(each -> each instanceof Collection ? ((Collection<?>) each).stream().map(Object::toString).collect(Collectors.joining(", ")) : each).toArray(Object[]::new);
@@ -67,7 +77,7 @@ public abstract class ShardingSphereSQLException extends ShardingSphereExternalE
     
     /**
      * To SQL exception.
-     * 
+     *
      * @return SQL exception
      */
     public final SQLException toSQLException() {

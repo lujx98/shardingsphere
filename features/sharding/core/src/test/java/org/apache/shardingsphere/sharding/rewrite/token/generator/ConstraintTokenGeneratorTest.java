@@ -17,14 +17,14 @@
 
 package org.apache.shardingsphere.sharding.rewrite.token.generator;
 
+import org.apache.shardingsphere.infra.binder.context.statement.UnknownSQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.ddl.AlterTableStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.ddl.CreateDatabaseStatementContext;
 import org.apache.shardingsphere.infra.rewrite.sql.token.pojo.SQLToken;
 import org.apache.shardingsphere.sharding.rewrite.token.generator.impl.ConstraintTokenGenerator;
 import org.apache.shardingsphere.sharding.rewrite.token.pojo.ConstraintToken;
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.ConstraintSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.ddl.constraint.ConstraintSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -32,8 +32,8 @@ import java.util.Collections;
 import java.util.LinkedList;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -43,7 +43,7 @@ class ConstraintTokenGeneratorTest {
     @Test
     void assertIsGenerateSQLToken() {
         ConstraintTokenGenerator generator = new ConstraintTokenGenerator();
-        assertFalse(generator.isGenerateSQLToken(mock(CreateDatabaseStatementContext.class)));
+        assertFalse(generator.isGenerateSQLToken(mock(UnknownSQLStatementContext.class)));
         AlterTableStatementContext alterTableStatementContext = mock(AlterTableStatementContext.class);
         Collection<ConstraintSegment> constraintSegments = new LinkedList<>();
         when(alterTableStatementContext.getConstraints()).thenReturn(constraintSegments);

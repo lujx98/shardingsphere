@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-sharding</artifactId>
-        <version>5.4.2-SNAPSHOT</version>
+        <version>5.5.1-SNAPSHOT</version>
     </parent>
     <artifactId>shardingsphere-sharding-core</artifactId>
     <name>${project.artifactId}</name>
@@ -33,21 +33,6 @@
             <version>${project.version}</version>
         </dependency>
         
-        <dependency>
-            <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-infra-binder</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-infra-route</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-infra-rewrite</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
             <artifactId>shardingsphere-infra-merge</artifactId>
@@ -70,7 +55,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-sql-federation-core</artifactId>
+            <artifactId>shardingsphere-sql-federation-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

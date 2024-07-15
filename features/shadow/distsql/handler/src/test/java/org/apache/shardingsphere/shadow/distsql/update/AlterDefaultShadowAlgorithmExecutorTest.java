@@ -19,11 +19,11 @@ package org.apache.shardingsphere.shadow.distsql.update;
 
 import org.apache.shardingsphere.distsql.segment.AlgorithmSegment;
 import org.apache.shardingsphere.infra.algorithm.core.config.AlgorithmConfiguration;
-import org.apache.shardingsphere.infra.algorithm.core.exception.EmptyAlgorithmException;
+import org.apache.shardingsphere.infra.algorithm.core.exception.MissingRequiredAlgorithmException;
 import org.apache.shardingsphere.infra.algorithm.core.exception.UnregisteredAlgorithmException;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.spi.exception.ServiceProviderNotFoundException;
-import org.apache.shardingsphere.shadow.api.config.ShadowRuleConfiguration;
+import org.apache.shardingsphere.shadow.config.ShadowRuleConfiguration;
 import org.apache.shardingsphere.shadow.distsql.handler.update.AlterDefaultShadowAlgorithmExecutor;
 import org.apache.shardingsphere.shadow.distsql.segment.ShadowAlgorithmSegment;
 import org.apache.shardingsphere.shadow.distsql.statement.AlterDefaultShadowAlgorithmStatement;
@@ -80,7 +80,7 @@ class AlterDefaultShadowAlgorithmExecutorTest {
     void assertExecuteIncompletenessAlgorithm() {
         AlterDefaultShadowAlgorithmStatement sqlStatement = new AlterDefaultShadowAlgorithmStatement(
                 new ShadowAlgorithmSegment("default_shadow_algorithm", new AlgorithmSegment("", PropertiesBuilder.build(new Property("type", "value")))));
-        assertThrows(EmptyAlgorithmException.class, () -> executor.checkBeforeUpdate(sqlStatement));
+        assertThrows(MissingRequiredAlgorithmException.class, () -> executor.checkBeforeUpdate(sqlStatement));
     }
     
     @Test

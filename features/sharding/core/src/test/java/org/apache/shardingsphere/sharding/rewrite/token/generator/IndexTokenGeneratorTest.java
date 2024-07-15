@@ -17,17 +17,17 @@
 
 package org.apache.shardingsphere.sharding.rewrite.token.generator;
 
+import org.apache.shardingsphere.infra.binder.context.statement.UnknownSQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.ddl.AlterIndexStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.ddl.CreateDatabaseStatementContext;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.rewrite.sql.token.pojo.SQLToken;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.sharding.rewrite.token.generator.impl.IndexTokenGenerator;
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.index.IndexNameSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.index.IndexSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.ddl.index.IndexNameSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.ddl.index.IndexSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -47,14 +47,15 @@ class IndexTokenGeneratorTest {
     
     @Test
     void assertIsGenerateSQLToken() {
-        CreateDatabaseStatementContext createDatabaseStatementContext = mock(CreateDatabaseStatementContext.class);
+        UnknownSQLStatementContext sqlStatementContext = mock(UnknownSQLStatementContext.class);
         IndexTokenGenerator generator = new IndexTokenGenerator();
-        assertFalse(generator.isGenerateSQLToken(createDatabaseStatementContext));
+        assertFalse(generator.isGenerateSQLToken(sqlStatementContext));
         AlterIndexStatementContext alterIndexStatementContext = mock(AlterIndexStatementContext.class);
         Collection<IndexSegment> indexSegments = new LinkedList<>();
         when(alterIndexStatementContext.getIndexes()).thenReturn(indexSegments);
         assertFalse(generator.isGenerateSQLToken(alterIndexStatementContext));
         indexSegments.add(mock(IndexSegment.class));
+        when(alterIndexStatementContext.getDatabaseType()).thenReturn(TypedSPILoader.getService(DatabaseType.class, "PostgreSQL"));
         assertTrue(generator.isGenerateSQLToken(alterIndexStatementContext));
     }
     

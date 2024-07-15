@@ -18,8 +18,8 @@
 package org.apache.shardingsphere.encrypt.distsql.handler.update;
 
 import org.apache.shardingsphere.distsql.segment.AlgorithmSegment;
-import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
-import org.apache.shardingsphere.encrypt.api.config.rule.EncryptTableRuleConfiguration;
+import org.apache.shardingsphere.encrypt.config.EncryptRuleConfiguration;
+import org.apache.shardingsphere.encrypt.config.rule.EncryptTableRuleConfiguration;
 import org.apache.shardingsphere.encrypt.distsql.segment.EncryptColumnItemSegment;
 import org.apache.shardingsphere.encrypt.distsql.segment.EncryptColumnSegment;
 import org.apache.shardingsphere.encrypt.distsql.segment.EncryptRuleSegment;
@@ -63,7 +63,7 @@ class AlterEncryptRuleExecutorTest {
     @Test
     void assertCheckSQLStatementWithoutToBeAlteredEncryptors() {
         EncryptRule rule = mock(EncryptRule.class);
-        when(rule.getConfiguration()).thenReturn(createCurrentRuleConfiguration());
+        when(rule.getAllTableNames()).thenReturn(Collections.singleton("t_encrypt"));
         executor.setRule(rule);
         assertThrows(ServiceProviderNotFoundException.class, () -> executor.checkBeforeUpdate(createSQLStatement("INVALID_TYPE")));
     }
@@ -71,7 +71,7 @@ class AlterEncryptRuleExecutorTest {
     @Test
     void assertCheckSQLStatementWithConflictColumnNames() {
         EncryptRule rule = mock(EncryptRule.class);
-        when(rule.getConfiguration()).thenReturn(createCurrentRuleConfiguration());
+        when(rule.getAllTableNames()).thenReturn(Collections.singleton("t_encrypt"));
         executor.setRule(rule);
         assertThrows(InvalidRuleConfigurationException.class, () -> executor.checkBeforeUpdate(createConflictColumnNameSQLStatement()));
     }

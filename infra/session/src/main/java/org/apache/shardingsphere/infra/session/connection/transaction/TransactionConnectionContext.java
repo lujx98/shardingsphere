@@ -20,6 +20,8 @@ package org.apache.shardingsphere.infra.session.connection.transaction;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Optional;
+
 /**
  * Transaction connection context.
  */
@@ -32,6 +34,9 @@ public final class TransactionConnectionContext implements AutoCloseable {
     
     @Setter
     private volatile long beginMills;
+    
+    @Setter
+    private volatile boolean exceptionOccur;
     
     @Setter
     private volatile String readWriteSplitReplicaRoute;
@@ -55,10 +60,30 @@ public final class TransactionConnectionContext implements AutoCloseable {
         return inTransaction && ("XA".equals(transactionType) || "BASE".equals(transactionType));
     }
     
+    /**
+     * Get transaction type. 
+     *
+     * @return transaction type
+     */
+    public Optional<String> getTransactionType() {
+        return Optional.ofNullable(transactionType);
+    }
+    
+    /**
+     * Get read write split replica route. 
+     *
+     * @return read write split replica route
+     */
+    public Optional<String> getReadWriteSplitReplicaRoute() {
+        return Optional.ofNullable(readWriteSplitReplicaRoute);
+    }
+    
     @Override
     public void close() {
+        transactionType = null;
         inTransaction = false;
         beginMills = 0L;
+        exceptionOccur = false;
         readWriteSplitReplicaRoute = null;
     }
 }

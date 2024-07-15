@@ -20,18 +20,18 @@ package org.apache.shardingsphere.infra.executor.sql.process;
 import com.google.common.base.Strings;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.apache.shardingsphere.infra.annotation.HighFrequencyInvocation;
 import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.exception.kernel.connection.SQLExecutionInterruptedException;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Process registry.
  */
+@HighFrequencyInvocation
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ProcessRegistry {
     
@@ -50,17 +50,15 @@ public final class ProcessRegistry {
     
     /**
      * Put process.
-     * 
+     *
      * @param process process
      */
     public void add(final Process process) {
         if (isSameExecutionProcess(process)) {
-            Process oldProcess = processes.get(process.getId());
-            ShardingSpherePreconditions.checkState(!oldProcess.isInterrupted(), SQLExecutionInterruptedException::new);
-            merge(oldProcess, process);
-            return;
+            merge(processes.get(process.getId()), process);
+        } else {
+            processes.put(process.getId(), process);
         }
-        processes.put(process.getId(), process);
     }
     
     private boolean isSameExecutionProcess(final Process process) {
@@ -68,20 +66,17 @@ public final class ProcessRegistry {
     }
     
     private void merge(final Process oldProcess, final Process newProcess) {
-        int totalUnitCount = oldProcess.getTotalUnitCount() + newProcess.getTotalUnitCount();
-        int completedUnitCount = oldProcess.getCompletedUnitCount() + newProcess.getCompletedUnitCount();
-        boolean idle = oldProcess.isIdle() || newProcess.isIdle();
-        boolean interrupted = oldProcess.isInterrupted() || newProcess.isInterrupted();
-        Process process = new Process(oldProcess.getId(), oldProcess.getStartMillis(), oldProcess.getSql(), oldProcess.getDatabaseName(),
-                oldProcess.getUsername(), oldProcess.getHostname(), totalUnitCount, new AtomicInteger(completedUnitCount), idle, new AtomicBoolean(interrupted));
-        oldProcess.getProcessStatements().forEach(process::putProcessStatement);
-        newProcess.getProcessStatements().forEach(process::putProcessStatement);
-        processes.put(process.getId(), process);
+        ShardingSpherePreconditions.checkState(!oldProcess.isInterrupted(), SQLExecutionInterruptedException::new);
+        oldProcess.getTotalUnitCount().addAndGet(newProcess.getTotalUnitCount().get());
+        oldProcess.getCompletedUnitCount().addAndGet(newProcess.getCompletedUnitCount().get());
+        oldProcess.getIdle().set(newProcess.getIdle().get());
+        oldProcess.getInterrupted().compareAndSet(false, newProcess.getInterrupted().get());
+        oldProcess.getProcessStatements().putAll(newProcess.getProcessStatements());
     }
     
     /**
      * Get process.
-     * 
+     *
      * @param id process ID
      * @return process
      */
@@ -91,7 +86,7 @@ public final class ProcessRegistry {
     
     /**
      * Remove process.
-     * 
+     *
      * @param id process ID
      */
     public void remove(final String id) {
@@ -100,7 +95,7 @@ public final class ProcessRegistry {
     
     /**
      * List all process.
-     * 
+     *
      * @return all processes
      */
     public Collection<Process> listAll() {

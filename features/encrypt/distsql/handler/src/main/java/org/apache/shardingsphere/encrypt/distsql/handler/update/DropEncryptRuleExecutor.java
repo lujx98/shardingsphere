@@ -21,8 +21,8 @@ import lombok.Setter;
 import org.apache.shardingsphere.infra.exception.kernel.metadata.rule.MissingRequiredRuleException;
 import org.apache.shardingsphere.distsql.handler.required.DistSQLExecutorCurrentRuleRequired;
 import org.apache.shardingsphere.distsql.handler.engine.update.rdl.rule.spi.database.DatabaseRuleDropExecutor;
-import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
-import org.apache.shardingsphere.encrypt.api.config.rule.EncryptTableRuleConfiguration;
+import org.apache.shardingsphere.encrypt.config.EncryptRuleConfiguration;
+import org.apache.shardingsphere.encrypt.config.rule.EncryptTableRuleConfiguration;
 import org.apache.shardingsphere.encrypt.distsql.statement.DropEncryptRuleStatement;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
 import org.apache.shardingsphere.infra.algorithm.core.config.AlgorithmConfiguration;
@@ -56,15 +56,13 @@ public final class DropEncryptRuleExecutor implements DatabaseRuleDropExecutor<D
     }
     
     private void checkToBeDroppedEncryptTableNames(final DropEncryptRuleStatement sqlStatement) {
-        Collection<String> currentEncryptTableNames = rule.getConfiguration().getTables()
-                .stream().map(EncryptTableRuleConfiguration::getName).collect(Collectors.toList());
-        Collection<String> notExistedTableNames = sqlStatement.getTables().stream().filter(each -> !currentEncryptTableNames.contains(each)).collect(Collectors.toList());
+        Collection<String> notExistedTableNames = sqlStatement.getTables().stream().filter(each -> !rule.getAllTableNames().contains(each)).collect(Collectors.toList());
         ShardingSpherePreconditions.checkMustEmpty(notExistedTableNames, () -> new MissingRequiredRuleException("Encrypt", database.getName(), notExistedTableNames));
     }
     
     @Override
     public boolean hasAnyOneToBeDropped(final DropEncryptRuleStatement sqlStatement) {
-        return !Collections.disjoint(rule.getConfiguration().getTables().stream().map(EncryptTableRuleConfiguration::getName).collect(Collectors.toSet()), sqlStatement.getTables());
+        return !Collections.disjoint(rule.getAllTableNames(), sqlStatement.getTables());
     }
     
     @Override

@@ -28,8 +28,7 @@ import org.apache.shardingsphere.sharding.rule.ShardingRule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Collections;
 import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -37,6 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -85,7 +85,7 @@ class DropDefaultShardingStrategyExecutorTest {
         executor.setRule(rule);
         ShardingRuleConfiguration toBeDroppedRuleConfig = executor.buildToBeDroppedRuleConfiguration(createSQLStatement("Table"));
         assertNull(toBeDroppedRuleConfig.getDefaultTableShardingStrategy());
-        assertThat(toBeDroppedRuleConfig.getShardingAlgorithms().size(), is(0));
+        assertTrue(toBeDroppedRuleConfig.getShardingAlgorithms().isEmpty());
     }
     
     @Test
@@ -106,9 +106,7 @@ class DropDefaultShardingStrategyExecutorTest {
     private ShardingRuleConfiguration createCurrentRuleConfiguration() {
         ShardingRuleConfiguration result = new ShardingRuleConfiguration();
         result.setDefaultDatabaseShardingStrategy(new StandardShardingStrategyConfiguration("order_id", "algorithm_name"));
-        Map<String, AlgorithmConfiguration> stringAlgorithms = new LinkedHashMap<>();
-        stringAlgorithms.put("algorithm_name", new AlgorithmConfiguration("INLINE", new Properties()));
-        result.setShardingAlgorithms(stringAlgorithms);
+        result.setShardingAlgorithms(Collections.singletonMap("algorithm_name", new AlgorithmConfiguration("INLINE", new Properties())));
         return result;
     }
 }
