@@ -17,28 +17,18 @@
 
 package org.apache.shardingsphere.infra.metadata.database;
 
+import lombok.AccessLevel;
 import lombok.Getter;
-import org.apache.shardingsphere.infra.config.database.DatabaseConfiguration;
-import org.apache.shardingsphere.infra.config.database.impl.DataSourceProvidedDatabaseConfiguration;
-import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
-import org.apache.shardingsphere.infra.instance.ComputeNodeInstanceContext;
 import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaData;
-import org.apache.shardingsphere.infra.metadata.database.resource.node.StorageNode;
-import org.apache.shardingsphere.infra.metadata.database.resource.unit.StorageUnit;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
-import org.apache.shardingsphere.infra.metadata.database.schema.builder.GenericSchemaBuilder;
-import org.apache.shardingsphere.infra.metadata.database.schema.builder.GenericSchemaBuilderMaterial;
-import org.apache.shardingsphere.infra.metadata.database.schema.builder.SystemSchemaBuilder;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
+import org.apache.shardingsphere.infra.metadata.identifier.ShardingSphereIdentifier;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.infra.rule.attribute.datanode.MutableDataNodeRuleAttribute;
-import org.apache.shardingsphere.infra.rule.builder.database.DatabaseRulesBuilder;
 
 import javax.sql.DataSource;
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -61,81 +51,25 @@ public final class ShardingSphereDatabase {
     
     private final RuleMetaData ruleMetaData;
     
-    private final Map<String, ShardingSphereSchema> schemas;
+    @Getter(AccessLevel.NONE)
+    private final Map<ShardingSphereIdentifier, ShardingSphereSchema> schemas;
     
     public ShardingSphereDatabase(final String name, final DatabaseType protocolType, final ResourceMetaData resourceMetaData,
-                                  final RuleMetaData ruleMetaData, final Map<String, ShardingSphereSchema> schemas) {
+                                  final RuleMetaData ruleMetaData, final Collection<ShardingSphereSchema> schemas) {
         this.name = name;
         this.protocolType = protocolType;
         this.resourceMetaData = resourceMetaData;
         this.ruleMetaData = ruleMetaData;
-        this.schemas = new ConcurrentHashMap<>(schemas.size(), 1F);
-        schemas.forEach((key, value) -> this.schemas.put(key.toLowerCase(), value));
+        this.schemas = new ConcurrentHashMap<>(schemas.stream().collect(Collectors.toMap(each -> new ShardingSphereIdentifier(each.getName()), each -> each)));
     }
     
     /**
-     * Create database meta data.
+     * Get all schemas.
      *
-     * @param name database name
-     * @param protocolType database protocol type
-     * @param storageTypes storage types
-     * @param databaseConfig database configuration
-     * @param props configuration properties
-     * @param computeNodeInstanceContext compute node instance context
-     * @return database meta data
-     * @throws SQLException SQL exception
+     * @return all schemas
      */
-    public static ShardingSphereDatabase create(final String name, final DatabaseType protocolType, final Map<String, DatabaseType> storageTypes,
-                                                final DatabaseConfiguration databaseConfig, final ConfigurationProperties props,
-                                                final ComputeNodeInstanceContext computeNodeInstanceContext) throws SQLException {
-        ResourceMetaData resourceMetaData = createResourceMetaData(databaseConfig.getDataSources(), databaseConfig.getStorageUnits());
-        Collection<ShardingSphereRule> databaseRules = DatabaseRulesBuilder.build(name, protocolType, databaseConfig, computeNodeInstanceContext, resourceMetaData);
-        Map<String, ShardingSphereSchema> schemas = new ConcurrentHashMap<>(GenericSchemaBuilder
-                .build(new GenericSchemaBuilderMaterial(protocolType, storageTypes, resourceMetaData.getDataSourceMap(), databaseRules,
-                        props, new DatabaseTypeRegistry(protocolType).getDefaultSchemaName(name))));
-        SystemSchemaBuilder.build(name, protocolType, props).forEach(schemas::putIfAbsent);
-        return create(name, protocolType, databaseRules, schemas, resourceMetaData);
-    }
-    
-    /**
-     * Create system database meta data.
-     *
-     * @param name system database name
-     * @param protocolType protocol database type
-     * @param props configuration properties
-     * @return system database meta data
-     */
-    public static ShardingSphereDatabase create(final String name, final DatabaseType protocolType, final ConfigurationProperties props) {
-        DatabaseConfiguration databaseConfig = new DataSourceProvidedDatabaseConfiguration(new LinkedHashMap<>(), new LinkedList<>());
-        ResourceMetaData resourceMetaData = createResourceMetaData(databaseConfig.getDataSources(), databaseConfig.getStorageUnits());
-        return create(name, protocolType, new LinkedList<>(), SystemSchemaBuilder.build(name, protocolType, props), resourceMetaData);
-    }
-    
-    /**
-     * Create database meta data.
-     *
-     * @param name database name
-     * @param protocolType database protocol type
-     * @param databaseConfig database configuration
-     * @param computeNodeInstanceContext compute node instance context
-     * @param schemas schemas
-     * @return database meta data
-     */
-    public static ShardingSphereDatabase create(final String name, final DatabaseType protocolType, final DatabaseConfiguration databaseConfig,
-                                                final ComputeNodeInstanceContext computeNodeInstanceContext, final Map<String, ShardingSphereSchema> schemas) {
-        ResourceMetaData resourceMetaData = createResourceMetaData(databaseConfig.getDataSources(), databaseConfig.getStorageUnits());
-        Collection<ShardingSphereRule> rules = DatabaseRulesBuilder.build(name, protocolType, databaseConfig, computeNodeInstanceContext, resourceMetaData);
-        return create(name, protocolType, rules, schemas, resourceMetaData);
-    }
-    
-    private static ShardingSphereDatabase create(final String name, final DatabaseType protocolType, final Collection<ShardingSphereRule> rules,
-                                                 final Map<String, ShardingSphereSchema> schemas, final ResourceMetaData resourceMetaData) {
-        RuleMetaData ruleMetaData = new RuleMetaData(rules);
-        return new ShardingSphereDatabase(name, protocolType, resourceMetaData, ruleMetaData, schemas);
-    }
-    
-    private static ResourceMetaData createResourceMetaData(final Map<StorageNode, DataSource> dataSources, final Map<String, StorageUnit> storageUnits) {
-        return new ResourceMetaData(dataSources, storageUnits);
+    public Collection<ShardingSphereSchema> getAllSchemas() {
+        return schemas.values();
     }
     
     /**
@@ -145,7 +79,7 @@ public final class ShardingSphereDatabase {
      * @return contains schema from database or not
      */
     public boolean containsSchema(final String schemaName) {
-        return schemas.containsKey(schemaName.toLowerCase());
+        return schemas.containsKey(new ShardingSphereIdentifier(schemaName));
     }
     
     /**
@@ -155,17 +89,16 @@ public final class ShardingSphereDatabase {
      * @return schema
      */
     public ShardingSphereSchema getSchema(final String schemaName) {
-        return schemas.get(schemaName.toLowerCase());
+        return schemas.get(new ShardingSphereIdentifier(schemaName));
     }
     
     /**
      * Add schema.
      *
-     * @param schemaName schema name
      * @param schema schema
      */
-    public void addSchema(final String schemaName, final ShardingSphereSchema schema) {
-        schemas.put(schemaName.toLowerCase(), schema);
+    public void addSchema(final ShardingSphereSchema schema) {
+        schemas.put(new ShardingSphereIdentifier(schema.getName()), schema);
     }
     
     /**
@@ -174,7 +107,7 @@ public final class ShardingSphereDatabase {
      * @param schemaName schema name
      */
     public void dropSchema(final String schemaName) {
-        schemas.remove(schemaName.toLowerCase());
+        schemas.remove(new ShardingSphereIdentifier(schemaName));
     }
     
     /**

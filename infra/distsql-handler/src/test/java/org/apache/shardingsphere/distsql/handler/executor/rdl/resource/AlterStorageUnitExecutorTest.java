@@ -59,7 +59,7 @@ class AlterStorageUnitExecutorTest {
     @BeforeEach
     void setUp() throws ReflectiveOperationException {
         executor.setDatabase(database);
-        Plugins.getMemberAccessor().set(executor.getClass().getDeclaredField("validateHandler"), executor, mock(DistSQLDataSourcePoolPropertiesValidator.class));
+        Plugins.getMemberAccessor().set(AlterStorageUnitExecutor.class.getDeclaredField("validateHandler"), executor, mock(DistSQLDataSourcePoolPropertiesValidator.class));
     }
     
     @Test
@@ -103,13 +103,14 @@ class AlterStorageUnitExecutorTest {
     }
     
     private AlterStorageUnitStatement createAlterStorageUnitStatement(final String resourceName) {
-        return new AlterStorageUnitStatement(Collections.singleton(new URLBasedDataSourceSegment(resourceName, "jdbc:mysql://127.0.0.1:3306/ds_0", "root", "", new Properties())));
+        return new AlterStorageUnitStatement(Collections.singleton(new URLBasedDataSourceSegment(resourceName, "jdbc:mysql://127.0.0.1:3306/ds_0", "root", "", new Properties())),
+                Collections.emptySet());
     }
     
     private AlterStorageUnitStatement createAlterStorageUnitStatementWithDuplicateStorageUnitNames() {
         return new AlterStorageUnitStatement(Arrays.asList(
                 new HostnameAndPortBasedDataSourceSegment("ds_0", "127.0.0.1", "3306", "ds_0", "root", "", new Properties()),
-                new URLBasedDataSourceSegment("ds_0", "jdbc:mysql://127.0.0.1:3306/ds_1", "root", "", new Properties())));
+                new URLBasedDataSourceSegment("ds_0", "jdbc:mysql://127.0.0.1:3306/ds_1", "root", "", new Properties())), Collections.emptySet());
     }
     
     private ConnectionProperties mockConnectionProperties(final String catalog) {

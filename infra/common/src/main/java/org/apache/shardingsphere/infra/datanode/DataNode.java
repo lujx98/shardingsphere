@@ -79,11 +79,15 @@ public final class DataNode {
      */
     public DataNode(final String databaseName, final DatabaseType databaseType, final String dataNode) {
         ShardingSpherePreconditions.checkState(dataNode.contains(DELIMITER), () -> new InvalidDataNodeFormatException(dataNode));
-        boolean containsSchema = isValidDataNode(dataNode, 3);
-        List<String> segments = Splitter.on(DELIMITER).splitToList(dataNode);
+        boolean containsSchema = isSchemaAvailable(databaseType) && isValidDataNode(dataNode, 3);
+        List<String> segments = Splitter.on(DELIMITER).limit(containsSchema ? 3 : 2).splitToList(dataNode);
         dataSourceName = segments.get(0);
         schemaName = getSchemaName(databaseName, databaseType, containsSchema, segments);
         tableName = containsSchema ? segments.get(2).toLowerCase() : segments.get(1).toLowerCase();
+    }
+    
+    private boolean isSchemaAvailable(final DatabaseType databaseType) {
+        return new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData().isSchemaAvailable();
     }
     
     private String getSchemaName(final String databaseName, final DatabaseType databaseType, final boolean containsSchema, final List<String> segments) {
@@ -103,12 +107,12 @@ public final class DataNode {
     }
     
     /**
-     * Format data node as string.
+     * Format data node as string with schema.
      *
      * @return formatted data node
      */
     public String format() {
-        return dataSourceName + DELIMITER + tableName;
+        return null == schemaName ? String.join(DELIMITER, dataSourceName, tableName) : String.join(DELIMITER, dataSourceName, schemaName, tableName);
     }
     
     /**
@@ -119,7 +123,9 @@ public final class DataNode {
      */
     public String format(final DatabaseType databaseType) {
         DialectDatabaseMetaData dialectDatabaseMetaData = new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData();
-        return dialectDatabaseMetaData.getDefaultSchema().isPresent() ? dataSourceName + DELIMITER + schemaName + DELIMITER + tableName : dataSourceName + DELIMITER + tableName;
+        return dialectDatabaseMetaData.getDefaultSchema().isPresent() && null != schemaName
+                ? String.join(DELIMITER, dataSourceName, schemaName, tableName)
+                : String.join(DELIMITER, dataSourceName, tableName);
     }
     
     @Override

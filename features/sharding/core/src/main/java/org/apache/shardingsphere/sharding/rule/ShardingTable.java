@@ -17,6 +17,7 @@
 
 package org.apache.shardingsphere.sharding.rule;
 
+import com.cedarsoftware.util.CaseInsensitiveSet;
 import com.google.common.base.Strings;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -33,6 +34,7 @@ import org.apache.shardingsphere.sharding.api.config.strategy.keygen.KeyGenerate
 import org.apache.shardingsphere.sharding.api.config.strategy.sharding.NoneShardingStrategyConfiguration;
 import org.apache.shardingsphere.sharding.api.config.strategy.sharding.ShardingStrategyConfiguration;
 import org.apache.shardingsphere.sharding.api.sharding.ShardingAutoTableAlgorithm;
+import org.apache.shardingsphere.sharding.constant.ShardingTableConstants;
 import org.apache.shardingsphere.sharding.exception.metadata.DataNodeGenerateException;
 import org.apache.shardingsphere.sharding.exception.metadata.MissingRequiredDataNodesException;
 
@@ -46,8 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -56,10 +56,6 @@ import java.util.stream.Collectors;
 @Getter
 @ToString(exclude = {"dataNodeIndexMap", "actualTables", "actualDataSourceNames", "dataSourceDataNode", "tableDataNode"})
 public final class ShardingTable {
-    
-    private static final Pattern DATA_NODE_SUFFIX_PATTERN = Pattern.compile("\\d+$");
-    
-    private static final char DEFAULT_PADDING_CHAR = '0';
     
     private final String logicTable;
     
@@ -140,17 +136,17 @@ public final class ShardingTable {
     }
     
     private DataNodeInfo createDataSourceDataNode(final Collection<DataNode> actualDataNodes) {
-        String prefix = DATA_NODE_SUFFIX_PATTERN.matcher(actualDataNodes.iterator().next().getDataSourceName()).replaceAll("");
+        String prefix = ShardingTableConstants.DATA_NODE_SUFFIX_PATTERN.matcher(actualDataNodes.iterator().next().getDataSourceName()).replaceAll("");
         int suffixMinLength = actualDataNodes.stream().map(each -> each.getDataSourceName().length() - prefix.length()).min(Comparator.comparing(Integer::intValue)).orElse(1);
-        return new DataNodeInfo(prefix, suffixMinLength, DEFAULT_PADDING_CHAR);
+        return new DataNodeInfo(prefix, suffixMinLength, ShardingTableConstants.DEFAULT_PADDING_CHAR);
     }
     
     private DataNodeInfo createTableDataNode(final Collection<DataNode> actualDataNodes) {
         String tableName = actualDataNodes.iterator().next().getTableName();
-        String prefix = tableName.startsWith(logicTable) ? logicTable + DATA_NODE_SUFFIX_PATTERN.matcher(tableName.substring(logicTable.length())).replaceAll("")
-                : DATA_NODE_SUFFIX_PATTERN.matcher(tableName).replaceAll("");
+        String prefix = tableName.startsWith(logicTable) ? logicTable + ShardingTableConstants.DATA_NODE_SUFFIX_PATTERN.matcher(tableName.substring(logicTable.length())).replaceAll("")
+                : ShardingTableConstants.DATA_NODE_SUFFIX_PATTERN.matcher(tableName).replaceAll("");
         int suffixMinLength = actualDataNodes.stream().map(each -> each.getTableName().length() - prefix.length()).min(Comparator.comparing(Integer::intValue)).orElse(1);
-        return new DataNodeInfo(prefix, suffixMinLength, DEFAULT_PADDING_CHAR);
+        return new DataNodeInfo(prefix, suffixMinLength, ShardingTableConstants.DEFAULT_PADDING_CHAR);
     }
     
     private List<String> getDataNodes(final ShardingAutoTableRuleConfiguration tableRuleConfig, final ShardingAutoTableAlgorithm shardingAlgorithm, final Collection<String> dataSourceNames) {
@@ -163,7 +159,7 @@ public final class ShardingTable {
     }
     
     private Set<String> getActualTables() {
-        return actualDataNodes.stream().map(DataNode::getTableName).collect(Collectors.toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
+        return actualDataNodes.stream().map(DataNode::getTableName).collect(Collectors.toCollection(CaseInsensitiveSet::new));
     }
     
     private void addActualTable(final String datasourceName, final String tableName) {
@@ -212,15 +208,6 @@ public final class ShardingTable {
      */
     public Map<String, List<DataNode>> getDataNodeGroups() {
         return DataNodeUtils.getDataNodeGroups(actualDataNodes);
-    }
-    
-    /**
-     * Get actual data source names.
-     *
-     * @return actual data source names
-     */
-    public Collection<String> getActualDataSourceNames() {
-        return actualDataSourceNames;
     }
     
     /**

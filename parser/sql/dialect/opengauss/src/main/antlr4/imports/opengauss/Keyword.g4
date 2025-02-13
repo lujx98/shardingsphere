@@ -599,7 +599,7 @@ EXCEPT
 PACKAGE
     : P A C K A G E
     ;
-    
+
 MINUS
     : M I N U S
     ;
@@ -664,3 +664,6 @@ MAXVALUE
     : M A X V A L U E
     ;
 
+SEPARATOR
+    : S E P A R A T O R
+    ;

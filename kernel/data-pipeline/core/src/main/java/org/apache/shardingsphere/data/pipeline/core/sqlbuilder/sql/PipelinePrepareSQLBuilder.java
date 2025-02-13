@@ -19,8 +19,8 @@ package org.apache.shardingsphere.data.pipeline.core.sqlbuilder.sql;
 
 import org.apache.shardingsphere.data.pipeline.core.sqlbuilder.dialect.DialectPipelineSQLBuilder;
 import org.apache.shardingsphere.data.pipeline.core.sqlbuilder.segment.PipelineSQLSegmentBuilder;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.core.spi.DatabaseTypedSPILoader;
+import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 
 import java.util.Optional;
 
@@ -73,12 +73,13 @@ public final class PipelinePrepareSQLBuilder {
     /**
      * Build estimated count SQL.
      *
+     * @param catalogName catalog name
      * @param schemaName schema name
      * @param tableName table name
      * @return estimated count SQL
      */
-    public Optional<String> buildEstimatedCountSQL(final String schemaName, final String tableName) {
-        return dialectSQLBuilder.buildEstimatedCountSQL(sqlSegmentBuilder.getQualifiedTableName(schemaName, tableName));
+    public Optional<String> buildEstimatedCountSQL(final String catalogName, final String schemaName, final String tableName) {
+        return dialectSQLBuilder.buildEstimatedCountSQL(catalogName, sqlSegmentBuilder.getQualifiedTableName(schemaName, tableName));
     }
     
     /**

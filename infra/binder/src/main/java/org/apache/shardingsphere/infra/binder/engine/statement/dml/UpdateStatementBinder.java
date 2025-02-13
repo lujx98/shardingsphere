@@ -17,18 +17,19 @@
 
 package org.apache.shardingsphere.infra.binder.engine.statement.dml;
 
+import com.cedarsoftware.util.CaseInsensitiveMap.CaseInsensitiveString;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Multimap;
 import lombok.SneakyThrows;
-import org.apache.shardingsphere.infra.binder.engine.segment.assign.AssignmentSegmentBinder;
-import org.apache.shardingsphere.infra.binder.engine.segment.from.TableSegmentBinder;
-import org.apache.shardingsphere.infra.binder.engine.segment.from.context.TableSegmentBinderContext;
-import org.apache.shardingsphere.infra.binder.engine.segment.where.WhereSegmentBinder;
+import org.apache.shardingsphere.infra.binder.engine.segment.dml.assign.AssignmentSegmentBinder;
+import org.apache.shardingsphere.infra.binder.engine.segment.dml.from.TableSegmentBinder;
+import org.apache.shardingsphere.infra.binder.engine.segment.dml.from.context.TableSegmentBinderContext;
+import org.apache.shardingsphere.infra.binder.engine.segment.dml.order.OrderBySegmentBinder;
+import org.apache.shardingsphere.infra.binder.engine.segment.dml.predicate.WhereSegmentBinder;
+import org.apache.shardingsphere.infra.binder.engine.segment.dml.with.WithSegmentBinder;
 import org.apache.shardingsphere.infra.binder.engine.statement.SQLStatementBinder;
 import org.apache.shardingsphere.infra.binder.engine.statement.SQLStatementBinderContext;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.UpdateStatement;
-
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * Update statement binder.
@@ -38,21 +39,24 @@ public final class UpdateStatementBinder implements SQLStatementBinder<UpdateSta
     @Override
     public UpdateStatement bind(final UpdateStatement sqlStatement, final SQLStatementBinderContext binderContext) {
         UpdateStatement result = copy(sqlStatement);
-        Map<String, TableSegmentBinderContext> tableBinderContexts = new LinkedHashMap<>();
-        result.setTable(TableSegmentBinder.bind(sqlStatement.getTable(), binderContext, tableBinderContexts, Collections.emptyMap()));
-        sqlStatement.getAssignmentSegment().ifPresent(optional -> result.setSetAssignment(AssignmentSegmentBinder.bind(optional, binderContext, tableBinderContexts, Collections.emptyMap())));
-        sqlStatement.getWhere().ifPresent(optional -> result.setWhere(WhereSegmentBinder.bind(optional, binderContext, tableBinderContexts, Collections.emptyMap())));
+        Multimap<CaseInsensitiveString, TableSegmentBinderContext> tableBinderContexts = LinkedHashMultimap.create();
+        sqlStatement.getWithSegment().ifPresent(optional -> result.setWithSegment(WithSegmentBinder.bind(optional, binderContext)));
+        result.setTable(TableSegmentBinder.bind(sqlStatement.getTable(), binderContext, tableBinderContexts, LinkedHashMultimap.create()));
+        sqlStatement.getFrom().ifPresent(optional -> result.setFrom(TableSegmentBinder.bind(optional, binderContext, tableBinderContexts, LinkedHashMultimap.create())));
+        sqlStatement.getAssignmentSegment().ifPresent(optional -> result.setSetAssignment(AssignmentSegmentBinder.bind(optional, binderContext, tableBinderContexts, LinkedHashMultimap.create())));
+        sqlStatement.getWhere().ifPresent(optional -> result.setWhere(WhereSegmentBinder.bind(optional, binderContext, tableBinderContexts, LinkedHashMultimap.create())));
+        sqlStatement.getOrderBy().ifPresent(optional -> result.setOrderBy(
+                OrderBySegmentBinder.bind(optional, binderContext, LinkedHashMultimap.create(), tableBinderContexts, LinkedHashMultimap.create())));
         return result;
     }
     
     @SneakyThrows(ReflectiveOperationException.class)
     private UpdateStatement copy(final UpdateStatement sqlStatement) {
         UpdateStatement result = sqlStatement.getClass().getDeclaredConstructor().newInstance();
-        sqlStatement.getOrderBy().ifPresent(result::setOrderBy);
         sqlStatement.getLimit().ifPresent(result::setLimit);
-        sqlStatement.getWithSegment().ifPresent(result::setWithSegment);
         result.addParameterMarkerSegments(sqlStatement.getParameterMarkerSegments());
         result.getCommentSegments().addAll(sqlStatement.getCommentSegments());
+        result.getVariableNames().addAll(sqlStatement.getVariableNames());
         return result;
     }
 }

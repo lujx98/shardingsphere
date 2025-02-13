@@ -24,13 +24,11 @@ import org.apache.shardingsphere.distsql.statement.rdl.rule.database.DatabaseRul
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
 import org.apache.shardingsphere.infra.config.rule.decorator.RuleConfigurationDecorator;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
-import org.apache.shardingsphere.infra.metadata.version.MetaDataVersion;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
 import org.apache.shardingsphere.mode.persist.service.MetaDataManagerPersistService;
 
-import java.util.Collection;
+import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -48,13 +46,10 @@ public final class CreateDatabaseRuleOperator implements DatabaseRuleOperator {
     
     @Override
     @SuppressWarnings("unchecked")
-    public Collection<MetaDataVersion> operate(final DatabaseRuleDefinitionStatement sqlStatement, final ShardingSphereDatabase database, final RuleConfiguration currentRuleConfig) {
+    public void operate(final DatabaseRuleDefinitionStatement sqlStatement, final ShardingSphereDatabase database, final RuleConfiguration currentRuleConfig) throws SQLException {
         RuleConfiguration toBeCreatedRuleConfig = executor.buildToBeCreatedRuleConfiguration(sqlStatement);
-        MetaDataContexts originalMetaDataContexts = contextManager.getMetaDataContexts();
         MetaDataManagerPersistService metaDataManagerPersistService = contextManager.getPersistServiceFacade().getMetaDataManagerPersistService();
-        Collection<MetaDataVersion> result = metaDataManagerPersistService.alterRuleConfiguration(database.getName(), decorateRuleConfiguration(database, toBeCreatedRuleConfig));
-        metaDataManagerPersistService.afterRuleConfigurationAltered(database.getName(), originalMetaDataContexts, false);
-        return result;
+        metaDataManagerPersistService.alterRuleConfiguration(database, decorateRuleConfiguration(database, toBeCreatedRuleConfig));
     }
     
     @SuppressWarnings("unchecked")

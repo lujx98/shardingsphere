@@ -58,7 +58,7 @@ public final class OpenGaussPipelineSQLBuilder implements DialectPipelineSQLBuil
     }
     
     @Override
-    public Optional<String> buildEstimatedCountSQL(final String qualifiedTableName) {
+    public Optional<String> buildEstimatedCountSQL(final String catalogName, final String qualifiedTableName) {
         return Optional.of(String.format("SELECT reltuples::integer FROM pg_class WHERE oid='%s'::regclass::oid;", qualifiedTableName));
     }
     
@@ -69,8 +69,15 @@ public final class OpenGaussPipelineSQLBuilder implements DialectPipelineSQLBuil
                 Statement statement = connection.createStatement();
                 ResultSet resultSet = statement.executeQuery(String.format("SELECT * FROM pg_get_tabledef('%s.%s')", schemaName, tableName))) {
             if (resultSet.next()) {
-                // TODO use ";" to split is not always correct
-                return Arrays.asList(resultSet.getString("pg_get_tabledef").split(";"));
+                // TODO use ";" to split is not always correct if return value's comments contains ";"
+                Collection<String> defSQLs = Arrays.asList(resultSet.getString("pg_get_tabledef").split(";"));
+                return defSQLs.stream().map(sql -> {
+                    String targetPrefix = "ALTER TABLE " + tableName;
+                    if (sql.trim().startsWith(targetPrefix)) {
+                        return sql.replaceFirst(targetPrefix, "ALTER TABLE " + schemaName + "." + tableName);
+                    }
+                    return sql;
+                }).collect(Collectors.toList());
             }
         }
         throw new CreateTableSQLGenerateException(tableName);
@@ -79,6 +86,11 @@ public final class OpenGaussPipelineSQLBuilder implements DialectPipelineSQLBuil
     @Override
     public Optional<String> buildQueryCurrentPositionSQL() {
         return Optional.of("SELECT * FROM pg_current_xlog_location()");
+    }
+    
+    @Override
+    public String wrapWithPageQuery(final String sql) {
+        return sql + " LIMIT ?";
     }
     
     @Override

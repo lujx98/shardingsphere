@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-parser-sql-statement</artifactId>
-        <version>5.5.1-SNAPSHOT</version>
+        <version>5.5.3-SNAPSHOT</version>
     </parent>
     <artifactId>shardingsphere-parser-sql-statement-type</artifactId>
     <packaging>pom</packaging>
@@ -30,6 +30,7 @@
     <modules>
         <module>clickhouse</module>
         <module>doris</module>
+        <module>firebird</module>
         <module>hive</module>
         <module>mysql</module>
         <module>opengauss</module>

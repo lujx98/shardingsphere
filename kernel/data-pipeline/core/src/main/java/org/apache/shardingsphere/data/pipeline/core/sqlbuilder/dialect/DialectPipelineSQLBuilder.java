@@ -19,6 +19,7 @@ package org.apache.shardingsphere.data.pipeline.core.sqlbuilder.dialect;
 
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.DataRecord;
 import org.apache.shardingsphere.infra.database.core.spi.DatabaseTypedSPI;
+import org.apache.shardingsphere.infra.spi.annotation.SingletonSPI;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
@@ -28,6 +29,7 @@ import java.util.Optional;
 /**
  * Dialect pipeline SQL builder.
  */
+@SingletonSPI
 public interface DialectPipelineSQLBuilder extends DatabaseTypedSPI {
     
     /**
@@ -61,10 +63,11 @@ public interface DialectPipelineSQLBuilder extends DatabaseTypedSPI {
     /**
      * Build estimated count SQL.
      *
+     * @param catalogName catalog name
      * @param qualifiedTableName qualified table name
      * @return built SQL
      */
-    default Optional<String> buildEstimatedCountSQL(final String qualifiedTableName) {
+    default Optional<String> buildEstimatedCountSQL(final String catalogName, final String qualifiedTableName) {
         return Optional.empty();
     }
     
@@ -98,4 +101,12 @@ public interface DialectPipelineSQLBuilder extends DatabaseTypedSPI {
     default Optional<String> buildQueryCurrentPositionSQL() {
         return Optional.empty();
     }
+    
+    /**
+     * Wrap with page query.
+     *
+     * @param sql SQL
+     * @return wrapped SQL
+     */
+    String wrapWithPageQuery(String sql);
 }

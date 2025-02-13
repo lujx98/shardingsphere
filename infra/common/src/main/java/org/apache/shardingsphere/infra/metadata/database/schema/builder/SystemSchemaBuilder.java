@@ -36,6 +36,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Properties;
 
@@ -65,7 +66,7 @@ public final class SystemSchemaBuilder {
     }
     
     private static boolean isSystemSchemaMetaDataEnabled(final Properties props) {
-        TemporaryConfigurationPropertyKey configKey = TemporaryConfigurationPropertyKey.SYSTEM_SCHEMA_METADATA_ENABLED;
+        TemporaryConfigurationPropertyKey configKey = TemporaryConfigurationPropertyKey.SYSTEM_SCHEMA_METADATA_ASSEMBLY_ENABLED;
         return Boolean.parseBoolean(props.getOrDefault(configKey.getKey(), configKey.getDefaultValue()).toString());
     }
     
@@ -77,13 +78,13 @@ public final class SystemSchemaBuilder {
     
     private static ShardingSphereSchema createSchema(final String schemaName, final Collection<InputStream> schemaStreams, final YamlTableSwapper swapper,
                                                      final boolean isSystemSchemaMetadataEnabled) {
-        Map<String, ShardingSphereTable> tables = new LinkedHashMap<>(schemaStreams.size(), 1F);
+        Collection<ShardingSphereTable> tables = new LinkedList<>();
         for (InputStream each : schemaStreams) {
             YamlShardingSphereTable metaData = new Yaml().loadAs(each, YamlShardingSphereTable.class);
             if (isSystemSchemaMetadataEnabled || KernelSupportedSystemTables.isSupportedSystemTable(schemaName, metaData.getName())) {
-                tables.put(metaData.getName(), swapper.swapToObject(metaData));
+                tables.add(swapper.swapToObject(metaData));
             }
         }
-        return new ShardingSphereSchema(tables, Collections.emptyMap());
+        return new ShardingSphereSchema(schemaName, tables, Collections.emptyList());
     }
 }

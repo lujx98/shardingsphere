@@ -127,6 +127,12 @@ ASSIGN_GTIDS_TO_ANONYMOUS_TRANSACTIONS
     : A S S I G N UL_ G T I D S UL_ T O UL_ A N O N Y M O U S UL_ T R A N S A C T I O N S
     ;
 
+// DORIS ADDED BEGIN
+BITXOR
+    : B I T X O R
+    ;
+// DORIS ADDED END
+
 BIT_XOR
     : B I T UL_ X O R
     ;
@@ -759,6 +765,12 @@ EXTENDED
     :  E X T E N D E D
     ;
 
+// DORIS ADDED BEGIN
+EXTRACT_URL_PARAMETER
+    : E X T R A C T UL_ U R L UL_ P A R A M E T E R
+    ;
+// DORIS ADDED END
+
 EXTENT_SIZE
     : E X T E N T UL_ S I Z E
     ;
@@ -1066,6 +1078,13 @@ INSTALL
 INSTANCE
     : I N S T A N C E
     ;
+
+// DORIS ADDED BEGIN
+INSTR
+    : I N S T R
+    ;
+// DORIS ADDED END
+
 
 INT
     : I N T
@@ -2544,6 +2563,12 @@ STREAM
 STRING
     : S T R I N G
     ;
+
+// DORIS ADDED BEGIN
+STRRIGHT
+    : S T R R I G H T
+    ;
+// DORIS ADDED END
 
 SUBCLASS_ORIGIN
     : S U B C L A S S UL_ O R I G I N

@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-test</artifactId>
-        <version>5.5.1-SNAPSHOT</version>
+        <version>5.5.3-SNAPSHOT</version>
     </parent>
     <artifactId>shardingsphere-test-it</artifactId>
     <packaging>pom</packaging>
@@ -30,9 +30,11 @@
     <modules>
         <module>spi</module>
         <module>yaml</module>
+        <module>distsql</module>
         <module>parser</module>
         <module>optimizer</module>
         <module>rewriter</module>
         <module>pipeline</module>
+        <module>binder</module>
     </modules>
 </project>

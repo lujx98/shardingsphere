@@ -17,7 +17,7 @@
   -->
 
 <sql-cases>
-    <sql-case id="create_table_with_column_dec" value="create table test3(id int auto_increment, col1 dec default 0 not null, col2 DEC(6,2) default 0 not null, col3 FLOAT default 0 not null, col4 DECIMAL(8,3) default 0 not null, constraint test3_pk primary key (id))" db-types="MySQL" />
+    <sql-case id="create_table_with_column_dec" value="create table test3(id int auto_increment, col1 dec default 0 not null, col2 DEC(6,2) default 0 not null, col3 FLOAT default 0 not null, col4 DECIMAL(8,3) default 0 not null, constraint test3_pk primary key (id))" db-types="MySQL, Doris" />
     <sql-case id="create_table_with_backtick_engine_with_string" value="create table `t``1`(a int) engine='Innodb'" db-types="MySQL" />
     <sql-case id="create_table_with_backtick_engine_innodb" value="create table `t``1`(a int) engine=INNODB" db-types="MySQL" />
     <sql-case id="create_table_with_backtick_engine_myisam" value="create table `t``1`(a int) engine=myisam" db-types="MySQL" />
@@ -367,4 +367,5 @@
         &quot;enable_persistent_index&quot; = &quot;false&quot;,
         &quot;compression&quot; = &quot;LZ4&quot;
             );" db-types="Doris"/>
+    <sql-case id="create_table_with_column_default_system_user_function" value="CREATE TABLE t (c VARCHAR(288) DEFAULT (SYSTEM_USER()));" db-types="MySQL"/>
 </sql-cases>

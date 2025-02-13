@@ -49,12 +49,11 @@ public final class PipelineContextManagerLifecycleListener implements ContextMan
     @Override
     public void onInitialized(final ContextManager contextManager) {
         ModeConfiguration modeConfig = contextManager.getComputeNodeInstanceContext().getModeConfiguration();
-        if (!contextManager.getComputeNodeInstanceContext().isCluster()) {
+        if (!contextManager.getComputeNodeInstanceContext().getModeConfiguration().isCluster()) {
             log.info("mode type is not Cluster, mode type='{}', ignore", modeConfig.getType());
             return;
         }
         String preSelectedDatabaseName = contextManager.getPreSelectedDatabaseName();
-        // TODO When StandalonePersistRepository is equivalent with ClusterPersistRepository, use STANDALONE mode in pipeline IT and remove this check.
         if (DefaultDatabase.LOGIC_NAME.equals(preSelectedDatabaseName)) {
             return;
         }

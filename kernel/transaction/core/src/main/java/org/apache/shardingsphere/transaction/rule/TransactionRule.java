@@ -17,6 +17,7 @@
 
 package org.apache.shardingsphere.transaction.rule;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
@@ -31,11 +32,12 @@ import org.apache.shardingsphere.transaction.ConnectionTransaction;
 import org.apache.shardingsphere.transaction.ShardingSphereTransactionManagerEngine;
 import org.apache.shardingsphere.transaction.api.TransactionType;
 import org.apache.shardingsphere.transaction.config.TransactionRuleConfiguration;
+import org.apache.shardingsphere.transaction.constant.TransactionOrder;
 
 import javax.sql.DataSource;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -54,11 +56,12 @@ public final class TransactionRule implements GlobalRule, AutoCloseable {
     
     private final Properties props;
     
+    @Getter(AccessLevel.NONE)
     private final AtomicReference<ShardingSphereTransactionManagerEngine> resource;
     
     private final RuleAttributes attributes;
     
-    public TransactionRule(final TransactionRuleConfiguration ruleConfig, final Map<String, ShardingSphereDatabase> databases) {
+    public TransactionRule(final TransactionRuleConfiguration ruleConfig, final Collection<ShardingSphereDatabase> databases) {
         configuration = ruleConfig;
         defaultType = TransactionType.valueOf(ruleConfig.getDefaultType().toUpperCase());
         providerType = ruleConfig.getProviderType();
@@ -67,20 +70,19 @@ public final class TransactionRule implements GlobalRule, AutoCloseable {
         attributes = new RuleAttributes();
     }
     
-    private synchronized ShardingSphereTransactionManagerEngine createTransactionManagerEngine(final Map<String, ShardingSphereDatabase> databases) {
+    private synchronized ShardingSphereTransactionManagerEngine createTransactionManagerEngine(final Collection<ShardingSphereDatabase> databases) {
+        ShardingSphereTransactionManagerEngine result = new ShardingSphereTransactionManagerEngine(defaultType);
         if (databases.isEmpty()) {
-            return new ShardingSphereTransactionManagerEngine(defaultType);
+            return result;
         }
         Map<String, DatabaseType> databaseTypes = new LinkedHashMap<>(databases.size(), 1F);
         Map<String, DataSource> dataSourceMap = new LinkedHashMap<>(databases.size(), 1F);
-        for (Entry<String, ShardingSphereDatabase> entry : databases.entrySet()) {
-            ShardingSphereDatabase database = entry.getValue();
-            database.getResourceMetaData().getStorageUnits().forEach((key, value) -> {
-                databaseTypes.put(database.getName() + "." + key, value.getStorageType());
-                dataSourceMap.put(database.getName() + "." + key, value.getDataSource());
+        for (ShardingSphereDatabase each : databases) {
+            each.getResourceMetaData().getStorageUnits().forEach((key, value) -> {
+                databaseTypes.put(each.getName() + "." + key, value.getStorageType());
+                dataSourceMap.put(each.getName() + "." + key, value.getDataSource());
             });
         }
-        ShardingSphereTransactionManagerEngine result = new ShardingSphereTransactionManagerEngine(defaultType);
         result.init(databaseTypes, dataSourceMap, providerType);
         return result;
     }
@@ -106,7 +108,7 @@ public final class TransactionRule implements GlobalRule, AutoCloseable {
         if (!isAutoCommit) {
             return false;
         }
-        if (!TransactionType.isDistributedTransaction(defaultType) || connectionTransaction.isInTransaction()) {
+        if (!TransactionType.isDistributedTransaction(defaultType) || connectionTransaction.isInDistributedTransaction()) {
             return false;
         }
         return isWriteDMLStatement(executionContext.getSqlStatementContext().getSqlStatement()) && executionContext.getExecutionUnits().size() > 1;
@@ -117,14 +119,12 @@ public final class TransactionRule implements GlobalRule, AutoCloseable {
     }
     
     @Override
-    public void refresh(final Map<String, ShardingSphereDatabase> databases, final GlobalRuleChangedType changedType) {
+    public void refresh(final Collection<ShardingSphereDatabase> databases, final GlobalRuleChangedType changedType) {
         if (GlobalRuleChangedType.DATABASE_CHANGED != changedType) {
             return;
         }
         ShardingSphereTransactionManagerEngine previousEngine = resource.get();
-        if (null != previousEngine) {
-            close(previousEngine);
-        }
+        close(previousEngine);
         resource.set(createTransactionManagerEngine(databases));
     }
     
@@ -146,5 +146,10 @@ public final class TransactionRule implements GlobalRule, AutoCloseable {
             // CHECKSTYLE:ON
             log.error("Close transaction engine failed.", ex);
         }
+    }
+    
+    @Override
+    public int getOrder() {
+        return TransactionOrder.ORDER;
     }
 }

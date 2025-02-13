@@ -22,8 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.instance.workerid.WorkerIdAssignedException;
 import org.apache.shardingsphere.infra.instance.workerid.WorkerIdGenerator;
-import org.apache.shardingsphere.mode.manager.cluster.persist.ReservationPersistService;
-import org.apache.shardingsphere.mode.persist.service.ComputeNodePersistService;
+import org.apache.shardingsphere.mode.state.node.ComputeNodePersistService;
 import org.apache.shardingsphere.mode.repository.cluster.ClusterPersistRepository;
 
 import java.util.Collection;
@@ -56,13 +55,9 @@ public final class ClusterWorkerIdGenerator implements WorkerIdGenerator {
     
     @Override
     public int generate(final Properties props) {
-        int result = loadExistedWorkerId().orElseGet(this::generateNewWorkerId);
+        int result = computeNodePersistService.loadWorkerId(instanceId).orElseGet(this::generateNewWorkerId);
         logWarning(result, props);
         return result;
-    }
-    
-    private Optional<Integer> loadExistedWorkerId() {
-        return computeNodePersistService.loadInstanceWorkerId(instanceId);
     }
     
     private int generateNewWorkerId() {
@@ -71,14 +66,15 @@ public final class ClusterWorkerIdGenerator implements WorkerIdGenerator {
             generatedWorkId = generateAvailableWorkerId();
         } while (!generatedWorkId.isPresent());
         int result = generatedWorkId.get();
-        computeNodePersistService.persistInstanceWorkerId(instanceId, result);
+        computeNodePersistService.persistWorkerId(instanceId, result);
         return result;
     }
     
     private Optional<Integer> generateAvailableWorkerId() {
         Collection<Integer> assignedWorkerIds = computeNodePersistService.getAssignedWorkerIds();
         ShardingSpherePreconditions.checkState(assignedWorkerIds.size() <= MAX_WORKER_ID + 1, WorkerIdAssignedException::new);
-        PriorityQueue<Integer> availableWorkerIds = IntStream.range(0, 1024).boxed().filter(each -> !assignedWorkerIds.contains(each)).collect(Collectors.toCollection(PriorityQueue::new));
+        PriorityQueue<Integer> availableWorkerIds = IntStream.range(0, MAX_WORKER_ID + 1)
+                .boxed().filter(each -> !assignedWorkerIds.contains(each)).collect(Collectors.toCollection(PriorityQueue::new));
         Integer preselectedWorkerId = availableWorkerIds.poll();
         Preconditions.checkNotNull(preselectedWorkerId, "Preselected worker-id can not be null.");
         return reservationPersistService.reserveWorkerId(preselectedWorkerId, instanceId);

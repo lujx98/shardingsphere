@@ -21,8 +21,8 @@ import org.apache.groovy.util.Maps;
 import org.apache.shardingsphere.distsql.handler.fixture.DistSQLHandlerFixtureRule;
 import org.apache.shardingsphere.distsql.statement.rdl.resource.unit.type.UnregisterStorageUnitStatement;
 import org.apache.shardingsphere.infra.datasource.pool.props.domain.DataSourcePoolProperties;
-import org.apache.shardingsphere.infra.exception.kernel.metadata.resource.storageunit.MissingRequiredStorageUnitsException;
 import org.apache.shardingsphere.infra.exception.kernel.metadata.resource.storageunit.InUsedStorageUnitException;
+import org.apache.shardingsphere.infra.exception.kernel.metadata.resource.storageunit.MissingRequiredStorageUnitsException;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.resource.node.StorageNode;
 import org.apache.shardingsphere.infra.metadata.database.resource.unit.StorageUnit;
@@ -43,7 +43,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.sql.SQLException;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -92,11 +91,11 @@ class UnregisterStorageUnitExecutorTest {
     }
     
     @Test
-    void assertExecuteUpdateSuccess() throws SQLException {
+    void assertExecuteUpdateSuccess() {
         when(database.getRuleMetaData().getInUsedStorageUnitNameAndRulesMap()).thenReturn(Collections.emptyMap());
         UnregisterStorageUnitStatement sqlStatement = new UnregisterStorageUnitStatement(Collections.singleton("foo_ds"), false, false);
         executor.executeUpdate(sqlStatement, contextManager);
-        verify(metaDataManagerPersistService).unregisterStorageUnits("foo_db", sqlStatement.getStorageUnitNames());
+        verify(metaDataManagerPersistService).unregisterStorageUnits(database, sqlStatement.getStorageUnitNames());
     }
     
     @Test
@@ -123,18 +122,18 @@ class UnregisterStorageUnitExecutorTest {
     }
     
     @Test
-    void assertExecuteUpdateWithStorageUnitInUsedWithIgnoredTables() throws SQLException {
+    void assertExecuteUpdateWithStorageUnitInUsedWithIgnoredTables() {
         when(database.getRuleMetaData()).thenReturn(new RuleMetaData(Collections.singleton(new DistSQLHandlerFixtureRule())));
         UnregisterStorageUnitStatement sqlStatement = new UnregisterStorageUnitStatement(Collections.singleton("foo_ds"), true, false);
         executor.executeUpdate(sqlStatement, contextManager);
-        verify(metaDataManagerPersistService).unregisterStorageUnits("foo_db", sqlStatement.getStorageUnitNames());
+        verify(metaDataManagerPersistService).unregisterStorageUnits(database, sqlStatement.getStorageUnitNames());
     }
     
     @Test
-    void assertExecuteUpdateWithIfExists() throws SQLException {
+    void assertExecuteUpdateWithIfExists() {
         UnregisterStorageUnitStatement sqlStatement = new UnregisterStorageUnitStatement(true, Collections.singleton("foo_ds"), true, false);
         executor.executeUpdate(sqlStatement, contextManager);
-        verify(metaDataManagerPersistService).unregisterStorageUnits("foo_db", sqlStatement.getStorageUnitNames());
+        verify(metaDataManagerPersistService).unregisterStorageUnits(database, sqlStatement.getStorageUnitNames());
     }
     
     @Test

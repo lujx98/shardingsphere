@@ -19,11 +19,11 @@ package org.apache.shardingsphere.data.pipeline.core.consistencycheck.table;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.shardingsphere.infra.metadata.caseinsensitive.CaseInsensitiveQualifiedTable;
-import org.apache.shardingsphere.data.pipeline.core.metadata.model.PipelineColumnMetaData;
-import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceWrapper;
 import org.apache.shardingsphere.data.pipeline.core.consistencycheck.ConsistencyCheckJobItemProgressContext;
+import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSource;
+import org.apache.shardingsphere.data.pipeline.core.metadata.model.PipelineColumnMetaData;
 import org.apache.shardingsphere.data.pipeline.core.ratelimit.JobRateLimitAlgorithm;
+import org.apache.shardingsphere.infra.metadata.database.schema.QualifiedTable;
 
 import java.util.List;
 
@@ -36,13 +36,13 @@ public final class TableInventoryCheckParameter {
     
     private final String jobId;
     
-    private final PipelineDataSourceWrapper sourceDataSource;
+    private final PipelineDataSource sourceDataSource;
     
-    private final PipelineDataSourceWrapper targetDataSource;
+    private final PipelineDataSource targetDataSource;
     
-    private final CaseInsensitiveQualifiedTable sourceTable;
+    private final QualifiedTable sourceTable;
     
-    private final CaseInsensitiveQualifiedTable targetTable;
+    private final QualifiedTable targetTable;
     
     private final List<String> columnNames;
     

@@ -37,13 +37,11 @@ import org.apache.shardingsphere.infra.yaml.config.swapper.rule.YamlRuleConfigur
 import org.apache.shardingsphere.mode.repository.standalone.jdbc.props.JDBCRepositoryPropertyKey;
 import org.apache.shardingsphere.sharding.yaml.config.YamlShardingRuleConfiguration;
 import org.apache.shardingsphere.sharding.yaml.swapper.ShardingRuleConfigurationConverter;
-import org.apache.shardingsphere.single.constant.SingleTableConstants;
-import org.apache.shardingsphere.single.yaml.config.pojo.YamlSingleRuleConfiguration;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -58,39 +56,38 @@ public final class ShardingSpherePipelineDataSourceCreator implements PipelineDa
     
     @Override
     public DataSource create(final Object dataSourceConfig) throws SQLException {
-        YamlRootConfiguration rootConfig = YamlEngine.unmarshal(YamlEngine.marshal(dataSourceConfig), YamlRootConfiguration.class);
-        removeAuthorityRule(rootConfig);
-        updateSingleRuleConfiguration(rootConfig);
-        disableSystemSchemaMetadata(rootConfig);
-        enableStreamingQuery(rootConfig);
-        Optional<YamlShardingRuleConfiguration> yamlShardingRuleConfig = ShardingRuleConfigurationConverter.findYamlShardingRuleConfiguration(rootConfig.getRules());
+        YamlRootConfiguration yamlRootConfig = YamlEngine.unmarshal(YamlEngine.marshal(dataSourceConfig), YamlRootConfiguration.class);
+        removeAuthorityRuleConfiguration(yamlRootConfig);
+        updateConfigurationProperties(yamlRootConfig);
+        updateShardingRuleConfiguration(yamlRootConfig);
+        yamlRootConfig.setMode(createStandaloneModeConfiguration());
+        return createShardingSphereDataSource(yamlRootConfig);
+    }
+    
+    private void removeAuthorityRuleConfiguration(final YamlRootConfiguration yamlRootConfig) {
+        yamlRootConfig.getRules().removeIf(YamlAuthorityRuleConfiguration.class::isInstance);
+    }
+    
+    private void updateConfigurationProperties(final YamlRootConfiguration yamlRootConfig) {
+        Properties newProps = new Properties();
+        for (String each : Arrays.asList(ConfigurationPropertyKey.KERNEL_EXECUTOR_SIZE.getKey(), ConfigurationPropertyKey.SYSTEM_LOG_LEVEL.getKey(), ConfigurationPropertyKey.SQL_SHOW.getKey())) {
+            Object value = yamlRootConfig.getProps().get(each);
+            if (null != value) {
+                newProps.put(each, value);
+            }
+        }
+        newProps.put(TemporaryConfigurationPropertyKey.SYSTEM_SCHEMA_METADATA_ASSEMBLY_ENABLED.getKey(), String.valueOf(Boolean.FALSE));
+        // Set a large enough value to enable ConnectionMode.MEMORY_STRICTLY, make sure streaming query work.
+        newProps.put(ConfigurationPropertyKey.MAX_CONNECTIONS_SIZE_PER_QUERY.getKey(), 100000);
+        yamlRootConfig.setProps(newProps);
+    }
+    
+    private void updateShardingRuleConfiguration(final YamlRootConfiguration yamlRootConfig) {
+        Optional<YamlShardingRuleConfiguration> yamlShardingRuleConfig = ShardingRuleConfigurationConverter.findYamlShardingRuleConfiguration(yamlRootConfig.getRules());
         if (yamlShardingRuleConfig.isPresent()) {
             enableRangeQueryForInline(yamlShardingRuleConfig.get());
             removeAuditStrategy(yamlShardingRuleConfig.get());
         }
-        rootConfig.setMode(createStandaloneModeConfiguration());
-        return createDataSourceWithoutCache(rootConfig);
-    }
-    
-    private void removeAuthorityRule(final YamlRootConfiguration rootConfig) {
-        rootConfig.getRules().stream().filter(YamlAuthorityRuleConfiguration.class::isInstance).findFirst().map(each -> rootConfig.getRules().remove(each));
-    }
-    
-    private void updateSingleRuleConfiguration(final YamlRootConfiguration rootConfig) {
-        rootConfig.getRules().removeIf(YamlSingleRuleConfiguration.class::isInstance);
-        YamlSingleRuleConfiguration singleRuleConfig = new YamlSingleRuleConfiguration();
-        singleRuleConfig.setTables(Collections.singletonList(SingleTableConstants.ALL_TABLES));
-        rootConfig.getRules().add(singleRuleConfig);
-    }
-    
-    private void disableSystemSchemaMetadata(final YamlRootConfiguration rootConfig) {
-        rootConfig.getProps().put(TemporaryConfigurationPropertyKey.SYSTEM_SCHEMA_METADATA_ENABLED.getKey(), String.valueOf(Boolean.FALSE));
-    }
-    
-    // TODO Another way is improving ExecuteQueryCallback.executeSQL to enable streaming query, then remove it
-    private void enableStreamingQuery(final YamlRootConfiguration rootConfig) {
-        // Set a large enough value to enable ConnectionMode.MEMORY_STRICTLY, make sure streaming query work.
-        rootConfig.getProps().put(ConfigurationPropertyKey.MAX_CONNECTIONS_SIZE_PER_QUERY.getKey(), 100000);
     }
     
     private void enableRangeQueryForInline(final YamlShardingRuleConfiguration yamlShardingRuleConfig) {
@@ -115,20 +112,18 @@ public final class ShardingSpherePipelineDataSourceCreator implements PipelineDa
     private YamlModeConfiguration createStandaloneModeConfiguration() {
         YamlModeConfiguration result = new YamlModeConfiguration();
         result.setType("Standalone");
-        YamlPersistRepositoryConfiguration repository = new YamlPersistRepositoryConfiguration();
-        result.setRepository(repository);
-        repository.setType("JDBC");
-        Properties props = new Properties();
-        repository.setProps(props);
-        props.setProperty(JDBCRepositoryPropertyKey.JDBC_URL.getKey(),
+        YamlPersistRepositoryConfiguration yamlRepositoryConfig = new YamlPersistRepositoryConfiguration();
+        yamlRepositoryConfig.setType("JDBC");
+        yamlRepositoryConfig.getProps().setProperty(JDBCRepositoryPropertyKey.JDBC_URL.getKey(),
                 String.format("jdbc:h2:mem:pipeline_db_%d;DB_CLOSE_DELAY=0;DATABASE_TO_UPPER=false;MODE=MYSQL", STANDALONE_DATABASE_ID.getAndIncrement()));
+        result.setRepository(yamlRepositoryConfig);
         return result;
     }
     
-    private DataSource createDataSourceWithoutCache(final YamlRootConfiguration rootConfig) throws SQLException {
-        Map<String, DataSource> dataSourceMap = new YamlDataSourceConfigurationSwapper().swapToDataSources(rootConfig.getDataSources(), false);
+    private DataSource createShardingSphereDataSource(final YamlRootConfiguration yamlRootConfig) throws SQLException {
+        Map<String, DataSource> dataSourceMap = new YamlDataSourceConfigurationSwapper().swapToDataSources(yamlRootConfig.getDataSources(), false);
         try {
-            return createDataSource(dataSourceMap, rootConfig);
+            return createShardingSphereDataSource(dataSourceMap, yamlRootConfig);
             // CHECKSTYLE:OFF
         } catch (final SQLException | RuntimeException ex) {
             // CHECKSTYLE:ON
@@ -137,10 +132,10 @@ public final class ShardingSpherePipelineDataSourceCreator implements PipelineDa
         }
     }
     
-    private DataSource createDataSource(final Map<String, DataSource> dataSourceMap, final YamlRootConfiguration rootConfig) throws SQLException {
-        ModeConfiguration modeConfig = null == rootConfig.getMode() ? null : new YamlModeConfigurationSwapper().swapToObject(rootConfig.getMode());
-        Collection<RuleConfiguration> ruleConfigs = new YamlRuleConfigurationSwapperEngine().swapToRuleConfigurations(rootConfig.getRules());
-        return ShardingSphereDataSourceFactory.createDataSource(rootConfig.getDatabaseName(), modeConfig, dataSourceMap, ruleConfigs, rootConfig.getProps());
+    private DataSource createShardingSphereDataSource(final Map<String, DataSource> dataSourceMap, final YamlRootConfiguration yamlRootConfig) throws SQLException {
+        ModeConfiguration modeConfig = new YamlModeConfigurationSwapper().swapToObject(yamlRootConfig.getMode());
+        Collection<RuleConfiguration> ruleConfigs = new YamlRuleConfigurationSwapperEngine().swapToRuleConfigurations(yamlRootConfig.getRules());
+        return ShardingSphereDataSourceFactory.createDataSource(yamlRootConfig.getDatabaseName(), modeConfig, dataSourceMap, ruleConfigs, yamlRootConfig.getProps());
     }
     
     @Override

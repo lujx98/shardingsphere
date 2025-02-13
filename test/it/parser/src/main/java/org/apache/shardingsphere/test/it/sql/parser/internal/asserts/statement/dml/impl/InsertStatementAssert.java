@@ -34,6 +34,7 @@ import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.InsertS
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.SQLCaseAssertContext;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.expression.ExpressionAssert;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.hint.WithTableHintClauseAssert;
+import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.insert.DerivedInsertColumnsAssert;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.insert.InsertColumnsClauseAssert;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.insert.InsertExecClauseAssert;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.insert.InsertValuesClauseAssert;
@@ -53,7 +54,6 @@ import java.util.Optional;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -72,6 +72,7 @@ public final class InsertStatementAssert {
     public static void assertIs(final SQLCaseAssertContext assertContext, final InsertStatement actual, final InsertStatementTestCase expected) {
         assertTable(assertContext, actual, expected);
         assertInsertColumnsClause(assertContext, actual, expected);
+        assertDerivedInsertColumns(assertContext, actual, expected);
         assertInsertValuesClause(assertContext, actual, expected);
         assertSetClause(assertContext, actual, expected);
         assertInsertSelectClause(assertContext, actual, expected);
@@ -89,9 +90,10 @@ public final class InsertStatementAssert {
     
     private static void assertTable(final SQLCaseAssertContext assertContext, final InsertStatement actual, final InsertStatementTestCase expected) {
         if (null == expected.getTable()) {
-            assertNull(actual.getTable(), assertContext.getText("Actual table should not exist."));
+            assertFalse(actual.getTable().isPresent(), assertContext.getText("Actual table should not exist."));
         } else {
-            TableAssert.assertIs(assertContext, actual.getTable(), expected.getTable());
+            assertTrue(actual.getTable().isPresent(), assertContext.getText("Actual table should exist."));
+            TableAssert.assertIs(assertContext, actual.getTable().get(), expected.getTable());
         }
     }
     
@@ -101,6 +103,15 @@ public final class InsertStatementAssert {
         } else {
             assertTrue(actual.getInsertColumns().isPresent(), assertContext.getText("Actual insert columns segment should exist."));
             InsertColumnsClauseAssert.assertIs(assertContext, actual.getInsertColumns().get(), expected.getInsertColumnsClause());
+        }
+    }
+    
+    private static void assertDerivedInsertColumns(final SQLCaseAssertContext assertContext, final InsertStatement actual, final InsertStatementTestCase expected) {
+        if (null == expected.getDerivedInsertColumns()) {
+            assertTrue(actual.getDerivedInsertColumns().isEmpty(), assertContext.getText("Actual derived insert columns should not exist."));
+        } else {
+            assertFalse(actual.getDerivedInsertColumns().isEmpty(), assertContext.getText("Actual derived insert columns should exist."));
+            DerivedInsertColumnsAssert.assertIs(assertContext, actual.getDerivedInsertColumns(), expected.getDerivedInsertColumns());
         }
     }
     

@@ -22,13 +22,13 @@ import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.mysql.type.MySQLDatabaseType;
 import org.apache.shardingsphere.infra.database.oracle.type.OracleDatabaseType;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
+import org.apache.shardingsphere.test.e2e.data.pipeline.env.PipelineE2EEnvironment;
+import org.apache.shardingsphere.test.e2e.data.pipeline.env.enums.PipelineProxyTypeEnum;
 import org.apache.shardingsphere.test.e2e.data.pipeline.framework.container.config.proxy.PipelineProxyClusterContainerConfigurationFactory;
 import org.apache.shardingsphere.test.e2e.data.pipeline.util.DockerImageVersion;
-import org.apache.shardingsphere.test.e2e.env.container.atomic.adapter.AdapterContainerFactory;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.adapter.config.AdaptorContainerConfiguration;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.adapter.impl.ShardingSphereProxyClusterContainer;
-import org.apache.shardingsphere.test.e2e.env.container.atomic.enums.AdapterMode;
-import org.apache.shardingsphere.test.e2e.env.container.atomic.enums.AdapterType;
+import org.apache.shardingsphere.test.e2e.env.container.atomic.adapter.impl.ShardingSphereProxyContainer;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.governance.GovernanceContainer;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.governance.impl.ZookeeperContainer;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.storage.DockerStorageContainer;
@@ -49,7 +49,7 @@ public final class DockerContainerComposer extends BaseContainerComposer {
     
     private final DatabaseType databaseType;
     
-    private final ShardingSphereProxyClusterContainer proxyContainer;
+    private ShardingSphereProxyClusterContainer proxyContainer;
     
     @Getter
     private final List<DockerStorageContainer> storageContainers = new LinkedList<>();
@@ -74,20 +74,36 @@ public final class DockerContainerComposer extends BaseContainerComposer {
         }
         AdaptorContainerConfiguration containerConfig = PipelineProxyClusterContainerConfigurationFactory.newInstance(databaseType);
         DatabaseType proxyDatabaseType = databaseType instanceof OracleDatabaseType ? TypedSPILoader.getService(DatabaseType.class, "MySQL") : databaseType;
-        ShardingSphereProxyClusterContainer proxyClusterContainer = (ShardingSphereProxyClusterContainer) AdapterContainerFactory.newInstance(
-                AdapterMode.CLUSTER, AdapterType.PROXY, proxyDatabaseType, null, "", containerConfig);
-        for (DockerStorageContainer each : storageContainers) {
-            proxyClusterContainer.dependsOn(governanceContainer, each);
+        if (PipelineE2EEnvironment.getInstance().getItProxyType() == PipelineProxyTypeEnum.INTERNAL) {
+            ShardingSphereProxyContainer proxyContainer = new ShardingSphereProxyContainer(proxyDatabaseType, containerConfig);
+            for (DockerStorageContainer each : storageContainers) {
+                proxyContainer.dependsOn(governanceContainer, each);
+            }
+            getContainers().registerContainer(proxyContainer);
+        } else {
+            ShardingSphereProxyClusterContainer proxyClusterContainer = new ShardingSphereProxyClusterContainer(proxyDatabaseType, containerConfig);
+            for (DockerStorageContainer each : storageContainers) {
+                proxyClusterContainer.dependsOn(governanceContainer, each);
+            }
+            proxyContainer = getContainers().registerContainer(proxyClusterContainer);
         }
-        proxyContainer = getContainers().registerContainer(proxyClusterContainer);
     }
     
     @Override
     public String getProxyJdbcUrl(final String databaseName) {
-        if (databaseType instanceof OracleDatabaseType) {
-            return DataSourceEnvironment.getURL(TypedSPILoader.getService(DatabaseType.class, "MySQL"), proxyContainer.getHost(), proxyContainer.getFirstMappedPort(), databaseName);
+        String host;
+        int port;
+        if (PipelineE2EEnvironment.getInstance().getItProxyType() == PipelineProxyTypeEnum.INTERNAL) {
+            host = "127.0.0.1";
+            port = 3307;
+        } else {
+            host = proxyContainer.getHost();
+            port = proxyContainer.getFirstMappedPort();
         }
-        return DataSourceEnvironment.getURL(databaseType, proxyContainer.getHost(), proxyContainer.getFirstMappedPort(), databaseName);
+        if (databaseType instanceof OracleDatabaseType) {
+            return DataSourceEnvironment.getURL(TypedSPILoader.getService(DatabaseType.class, "MySQL"), host, port, databaseName);
+        }
+        return DataSourceEnvironment.getURL(databaseType, host, port, databaseName);
     }
     
     @Override

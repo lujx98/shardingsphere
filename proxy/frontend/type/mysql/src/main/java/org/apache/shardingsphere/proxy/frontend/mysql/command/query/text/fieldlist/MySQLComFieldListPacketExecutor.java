@@ -63,34 +63,36 @@ public final class MySQLComFieldListPacketExecutor implements CommandExecutor {
     
     @Override
     public Collection<DatabasePacket> execute() throws SQLException {
-        String databaseName = connectionSession.getCurrentDatabaseName();
-        String sql = String.format(SQL, packet.getTable(), databaseName);
+        String currentDatabaseName = connectionSession.getCurrentDatabaseName();
+        String sql = String.format(SQL, packet.getTable(), currentDatabaseName);
         MetaDataContexts metaDataContexts = ProxyContext.getInstance().getContextManager().getMetaDataContexts();
         SQLParserRule sqlParserRule = metaDataContexts.getMetaData().getGlobalRuleMetaData().getSingleRule(SQLParserRule.class);
         SQLStatement sqlStatement = sqlParserRule.getSQLParserEngine(TypedSPILoader.getService(DatabaseType.class, "MySQL")).parse(sql, false);
         HintValueContext hintValueContext = SQLHintUtils.extractHint(sql);
-        SQLStatementContext sqlStatementContext = new SQLBindEngine(metaDataContexts.getMetaData(), databaseName, hintValueContext).bind(sqlStatement, Collections.emptyList());
+        SQLStatementContext sqlStatementContext = new SQLBindEngine(metaDataContexts.getMetaData(), currentDatabaseName, hintValueContext).bind(sqlStatement, Collections.emptyList());
         ProxyDatabaseConnectionManager databaseConnectionManager = connectionSession.getDatabaseConnectionManager();
         QueryContext queryContext = new QueryContext(sqlStatementContext, sql, Collections.emptyList(), hintValueContext, connectionSession.getConnectionContext(), metaDataContexts.getMetaData());
         databaseConnector = DatabaseConnectorFactory.getInstance().newInstance(queryContext, databaseConnectionManager, false);
         databaseConnector.execute();
-        return createColumnDefinition41Packets(databaseName);
+        return createColumnDefinition41Packets(currentDatabaseName);
     }
     
     private Collection<DatabasePacket> createColumnDefinition41Packets(final String databaseName) throws SQLException {
         Collection<DatabasePacket> result = new LinkedList<>();
-        int characterSet = connectionSession.getAttributeMap().attr(MySQLConstants.MYSQL_CHARACTER_SET_ATTRIBUTE_KEY).get().getId();
+        int characterSet = connectionSession.getAttributeMap().attr(MySQLConstants.CHARACTER_SET_ATTRIBUTE_KEY).get().getId();
         while (databaseConnector.next()) {
             String columnName = databaseConnector.getRowData().getCells().iterator().next().getData().toString();
             result.add(new MySQLColumnDefinition41Packet(
                     characterSet, databaseName, packet.getTable(), packet.getTable(), columnName, columnName, 100, MySQLBinaryColumnType.VARCHAR, 0, true));
         }
-        result.add(new MySQLEofPacket(ServerStatusFlagCalculator.calculateFor(connectionSession)));
+        result.add(new MySQLEofPacket(ServerStatusFlagCalculator.calculateFor(connectionSession, true)));
         return result;
     }
     
     @Override
     public void close() throws SQLException {
-        databaseConnector.close();
+        if (null != databaseConnector) {
+            databaseConnector.close();
+        }
     }
 }

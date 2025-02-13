@@ -121,7 +121,7 @@ identifier
 uescape
     : UESCAPE STRING_
     ;
-    
+
 unreservedWord
     : ABORT
     | ABSOLUTE
@@ -329,6 +329,7 @@ unreservedWord
     | PROCEDURES
     | PROGRAM
     | PUBLICATION
+    | QUARTER
     | QUOTE
     | RANGE
     | READ
@@ -427,6 +428,7 @@ unreservedWord
     | VIEW
     | VIEWS
     | VOLATILE
+    | WEEK
     | WHITESPACE
     | WITHIN
     | WITHOUT
@@ -490,7 +492,7 @@ synonymName
 objectName
     : (owner DOT_)? identifier
     ;
-    
+
 tableName
     : (owner DOT_)? name
     ;
@@ -846,7 +848,7 @@ jsonOperator
     | JSONB_PATH_CONTAIN_ANY_VALUE_ # jsonbPathContainAnyValue
     | JSONB_PATH_PREDICATE_CHECK_ # jsonbPathPredicateCheck
     ;
-    
+
 geometricOperator
     : GEOMETRIC_LENGTH_
     | GEOMETRIC_DISTANCE_
@@ -952,13 +954,16 @@ typeList
     : typeName (COMMA_ typeName)*
     ;
 
+separatorName
+    : SEPARATOR STRING_
+    ;
+
 funcApplication
     : funcName LP_ RP_
-    | funcName LP_ funcArgList sortClause? RP_
+    | funcName LP_ DISTINCT? funcArgList sortClause? separatorName? RP_
     | funcName LP_ VARIADIC funcArgExpr sortClause? RP_
     | funcName LP_ funcArgList COMMA_ VARIADIC funcArgExpr sortClause? RP_
     | funcName LP_ ALL funcArgList sortClause? RP_
-    | funcName LP_ DISTINCT funcArgList sortClause? RP_
     | funcName LP_ ASTERISK_ RP_
     ;
 
@@ -1147,7 +1152,9 @@ extractList
 
 extractArg
     : YEAR
+    | QUARTER
     | MONTH
+    | WEEK
     | DAY
     | HOUR
     | MINUTE
@@ -1972,11 +1979,11 @@ event
 typeNameList
     : typeName (COMMA_ typeName)*
     ;
-    
+
 ifNotExists
     : IF NOT EXISTS
     ;
-    
+
 ifExists
     : IF EXISTS
     ;

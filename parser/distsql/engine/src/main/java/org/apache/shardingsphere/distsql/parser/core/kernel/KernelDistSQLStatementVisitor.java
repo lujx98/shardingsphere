@@ -18,10 +18,12 @@
 package org.apache.shardingsphere.distsql.parser.core.kernel;
 
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.apache.groovy.parser.antlr4.util.StringUtils;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementBaseVisitor;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.AlgorithmDefinitionContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.AlterComputeNodeContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.AlterStorageUnitContext;
+import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.CheckPrivilegesContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.ConvertYamlConfigurationContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.DatabaseNameContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.DisableComputeNodeContext;
@@ -38,7 +40,6 @@ import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementPa
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.InstanceIdContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.LabelComputeNodeContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.LockClusterContext;
-import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.PasswordContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.PropertiesDefinitionContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.PropertyContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.RefreshDatabaseMetadataContext;
@@ -58,6 +59,7 @@ import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementPa
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.ShowStorageUnitsContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.ShowTableMetadataContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.StorageUnitDefinitionContext;
+import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.StorageUnitsDefinitionContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.UnlabelComputeNodeContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.UnlockClusterContext;
 import org.apache.shardingsphere.distsql.parser.autogen.KernelDistSQLStatementParser.UnregisterStorageUnitContext;
@@ -83,8 +85,8 @@ import org.apache.shardingsphere.distsql.statement.ral.updatable.LabelComputeNod
 import org.apache.shardingsphere.distsql.statement.ral.updatable.LockClusterStatement;
 import org.apache.shardingsphere.distsql.statement.ral.updatable.RefreshDatabaseMetaDataStatement;
 import org.apache.shardingsphere.distsql.statement.ral.updatable.RefreshTableMetaDataStatement;
-import org.apache.shardingsphere.distsql.statement.ral.updatable.SetDistVariableStatement;
 import org.apache.shardingsphere.distsql.statement.ral.updatable.SetComputeNodeStateStatement;
+import org.apache.shardingsphere.distsql.statement.ral.updatable.SetDistVariableStatement;
 import org.apache.shardingsphere.distsql.statement.ral.updatable.UnlabelComputeNodeStatement;
 import org.apache.shardingsphere.distsql.statement.ral.updatable.UnlockClusterStatement;
 import org.apache.shardingsphere.distsql.statement.rdl.resource.unit.type.AlterStorageUnitStatement;
@@ -93,6 +95,7 @@ import org.apache.shardingsphere.distsql.statement.rdl.resource.unit.type.Unregi
 import org.apache.shardingsphere.distsql.statement.rql.resource.ShowLogicalTablesStatement;
 import org.apache.shardingsphere.distsql.statement.rql.resource.ShowStorageUnitsStatement;
 import org.apache.shardingsphere.distsql.statement.rql.rule.database.ShowRulesUsedStorageUnitStatement;
+import org.apache.shardingsphere.infra.database.core.metadata.database.enums.QuoteCharacter;
 import org.apache.shardingsphere.sql.parser.api.ASTNode;
 import org.apache.shardingsphere.sql.parser.api.visitor.SQLVisitor;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.DatabaseSegment;
@@ -100,6 +103,7 @@ import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.Iden
 import org.apache.shardingsphere.sql.parser.statement.core.value.literal.impl.StringLiteralValue;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -111,12 +115,20 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
     
     @Override
     public ASTNode visitRegisterStorageUnit(final RegisterStorageUnitContext ctx) {
-        return new RegisterStorageUnitStatement(null != ctx.ifNotExists(), ctx.storageUnitDefinition().stream().map(each -> (DataSourceSegment) visit(each)).collect(Collectors.toList()));
+        return new RegisterStorageUnitStatement(null != ctx.ifNotExists(), getStorageUnits(ctx.storageUnitsDefinition()), getExpectedPrivileges(ctx.checkPrivileges()));
     }
     
     @Override
     public ASTNode visitAlterStorageUnit(final AlterStorageUnitContext ctx) {
-        return new AlterStorageUnitStatement(ctx.storageUnitDefinition().stream().map(each -> (DataSourceSegment) visit(each)).collect(Collectors.toList()));
+        return new AlterStorageUnitStatement(getStorageUnits(ctx.storageUnitsDefinition()), getExpectedPrivileges(ctx.checkPrivileges()));
+    }
+    
+    private Collection<DataSourceSegment> getStorageUnits(final StorageUnitsDefinitionContext ctx) {
+        return ctx.storageUnitDefinition().stream().map(each -> (DataSourceSegment) visit(each)).collect(Collectors.toList());
+    }
+    
+    private Collection<String> getExpectedPrivileges(final CheckPrivilegesContext ctx) {
+        return null == ctx ? Collections.emptySet() : ctx.privilegeType().stream().map(this::getIdentifierValue).collect(Collectors.toSet());
     }
     
     @Override
@@ -128,16 +140,12 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
     @Override
     public ASTNode visitStorageUnitDefinition(final StorageUnitDefinitionContext ctx) {
         String user = getIdentifierValue(ctx.user());
-        String password = null == ctx.password() ? "" : getPassword(ctx.password());
+        String password = null == ctx.password() ? "" : new StringLiteralValue(StringUtils.replaceStandardEscapes(ctx.password().getText())).getValue();
         Properties props = getProperties(ctx.propertiesDefinition());
         return null == ctx.urlSource()
                 ? new HostnameAndPortBasedDataSourceSegment(getIdentifierValue(ctx.storageUnitName()),
                         getIdentifierValue(ctx.simpleSource().hostname()), ctx.simpleSource().port().getText(), getIdentifierValue(ctx.simpleSource().dbName()), user, password, props)
                 : new URLBasedDataSourceSegment(getIdentifierValue(ctx.storageUnitName()), getIdentifierValue(ctx.urlSource().url()), user, password, props);
-    }
-    
-    private String getPassword(final PasswordContext ctx) {
-        return null == ctx ? null : StringLiteralValue.getStandardEscapesStringLiteralValue(ctx.getText()).getValue();
     }
     
     @Override
@@ -192,7 +200,7 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
             return result;
         }
         for (PropertyContext each : ctx.properties().property()) {
-            result.setProperty(IdentifierValue.getQuotedContent(each.key.getText()), IdentifierValue.getQuotedContent(each.value.getText()));
+            result.setProperty(QuoteCharacter.unwrapAndTrimText(each.key.getText()), QuoteCharacter.unwrapAndTrimText(each.value.getText()));
         }
         return result;
     }
@@ -209,8 +217,8 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
     @Override
     public ASTNode visitShowStorageUnits(final ShowStorageUnitsContext ctx) {
         DatabaseSegment database = null == ctx.databaseName() ? null : (DatabaseSegment) visit(ctx.databaseName());
-        Integer usageCount = null == ctx.usageCount() ? null : Integer.parseInt(ctx.usageCount().getText());
-        return new ShowStorageUnitsStatement(database, usageCount);
+        String likePattern = null == ctx.showLike() ? null : getIdentifierValue(ctx.showLike().likePattern());
+        return new ShowStorageUnitsStatement(database, likePattern);
     }
     
     @Override
@@ -225,8 +233,9 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
     
     @Override
     public ASTNode visitShowLogicalTables(final ShowLogicalTablesContext ctx) {
-        return new ShowLogicalTablesStatement(null == ctx.showLike() ? null : getIdentifierValue(ctx.showLike().likePattern()),
-                null == ctx.databaseName() ? null : (DatabaseSegment) visit(ctx.databaseName()));
+        return new ShowLogicalTablesStatement(null != ctx.FULL(),
+                null == ctx.databaseName() ? null : (DatabaseSegment) visit(ctx.databaseName()),
+                null == ctx.showLike() ? null : getIdentifierValue(ctx.showLike().likePattern()));
     }
     
     @Override
@@ -292,7 +301,7 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
     
     @Override
     public ASTNode visitImportMetaData(final ImportMetaDataContext ctx) {
-        return new ImportMetaDataStatement(null == ctx.metaDataValue() ? null : getQuotedContent(ctx.metaDataValue()), getIdentifierValue(ctx.filePath()));
+        return new ImportMetaDataStatement(null == ctx.metaDataValue() ? null : QuoteCharacter.unwrapText(ctx.metaDataValue().getText()), getIdentifierValue(ctx.filePath()));
     }
     
     @Override
@@ -306,27 +315,23 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
             return result;
         }
         for (PropertyContext each : ctx.properties().property()) {
-            result.setProperty(IdentifierValue.getQuotedContent(each.key.getText()), IdentifierValue.getQuotedContent(each.value.getText()));
+            result.setProperty(QuoteCharacter.unwrapAndTrimText(each.key.getText()), QuoteCharacter.unwrapAndTrimText(each.value.getText()));
         }
         return result;
     }
     
     @Override
     public ASTNode visitLockCluster(final LockClusterContext ctx) {
-        return new LockClusterStatement((AlgorithmSegment) visitAlgorithmDefinition(ctx.lockStrategy().algorithmDefinition()));
+        return new LockClusterStatement((AlgorithmSegment) visitAlgorithmDefinition(ctx.lockStrategy().algorithmDefinition()), Long.parseLong(getIdentifierValue(ctx.INT_())));
     }
     
     @Override
     public ASTNode visitUnlockCluster(final UnlockClusterContext ctx) {
-        return new UnlockClusterStatement();
+        return new UnlockClusterStatement(Long.parseLong(getIdentifierValue(ctx.INT_())));
     }
     
     private String getIdentifierValue(final ParseTree context) {
         return null == context ? null : new IdentifierValue(context.getText()).getValue();
-    }
-    
-    private String getQuotedContent(final ParseTree context) {
-        return IdentifierValue.getQuotedContent(context.getText());
     }
     
     @Override

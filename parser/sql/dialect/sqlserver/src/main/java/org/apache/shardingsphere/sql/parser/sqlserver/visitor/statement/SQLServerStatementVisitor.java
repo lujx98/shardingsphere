@@ -1335,6 +1335,9 @@ public abstract class SQLServerStatementVisitor extends SQLServerStatementBaseVi
         }
         result.setTable((TableSegment) visit(ctx.tableReferences()));
         result.setSetAssignment((SetAssignmentSegment) visit(ctx.setAssignmentsClause()));
+        if (null != ctx.fromClause()) {
+            result.setFrom((TableSegment) visit(ctx.fromClause()));
+        }
         if (null != ctx.withTableHint()) {
             result.setWithTableHintSegment((WithTableHintSegment) visit(ctx.withTableHint()));
         }
@@ -1362,11 +1365,7 @@ public abstract class SQLServerStatementVisitor extends SQLServerStatementBaseVi
         for (AssignmentContext each : ctx.assignment()) {
             assignments.add((ColumnAssignmentSegment) visit(each));
         }
-        SetAssignmentSegment result = new SetAssignmentSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), assignments);
-        if (null != ctx.fromClause()) {
-            result.setFrom((TableSegment) visit(ctx.fromClause()));
-        }
-        return result;
+        return new SetAssignmentSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), assignments);
     }
     
     @Override
@@ -1546,8 +1545,8 @@ public abstract class SQLServerStatementVisitor extends SQLServerStatementBaseVi
             result.setAlias(alias);
             return projection;
         }
-        LiteralExpressionSegment column = (LiteralExpressionSegment) projection;
-        ExpressionProjectionSegment result = new ExpressionProjectionSegment(getStartIndexWithAlias(column, alias), getStopIndexWithAlias(column, alias), String.valueOf(column.getLiterals()), column);
+        ExpressionSegment column = (ExpressionSegment) projection;
+        ExpressionProjectionSegment result = new ExpressionProjectionSegment(getStartIndexWithAlias(column, alias), getStopIndexWithAlias(column, alias), String.valueOf(column.getText()), column);
         result.setAlias(alias);
         return result;
     }

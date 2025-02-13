@@ -19,6 +19,7 @@ package org.apache.shardingsphere.sql.parser.statement.core.statement.dml;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.ReturningSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.assignment.SetAssignmentSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.hint.OptionHintSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.order.OrderBySegment;
@@ -154,5 +155,39 @@ public abstract class UpdateStatement extends AbstractSQLStatement implements DM
      * @param outputSegment output segment
      */
     public void setOutputSegment(final OutputSegment outputSegment) {
+    }
+    
+    /**
+     * Get from segment.
+     *
+     * @return from segment
+     */
+    public Optional<TableSegment> getFrom() {
+        return Optional.empty();
+    }
+    
+    /**
+     * Set from segment.
+     *
+     * @param from from segment
+     */
+    public void setFrom(final TableSegment from) {
+    }
+    
+    /**
+     * Get returning segment of update statement.
+     *
+     * @return returning segment
+     */
+    public Optional<ReturningSegment> getReturningSegment() {
+        return Optional.empty();
+    }
+    
+    /**
+     * Set returning segment of update statement.
+     *
+     * @param returningSegment returning segment
+     */
+    public void setReturningSegment(final ReturningSegment returningSegment) {
     }
 }

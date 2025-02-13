@@ -95,8 +95,8 @@ public final class MySQLComStmtPrepareExecutor implements CommandExecutor {
     
     private void failedIfContainsMultiStatements() {
         // TODO Multi statements should be identified by SQL Parser instead of checking if sql contains ";".
-        if (connectionSession.getAttributeMap().hasAttr(MySQLConstants.MYSQL_OPTION_MULTI_STATEMENTS)
-                && MySQLComSetOptionPacket.MYSQL_OPTION_MULTI_STATEMENTS_ON == connectionSession.getAttributeMap().attr(MySQLConstants.MYSQL_OPTION_MULTI_STATEMENTS).get()
+        if (connectionSession.getAttributeMap().hasAttr(MySQLConstants.OPTION_MULTI_STATEMENTS_ATTRIBUTE_KEY)
+                && MySQLComSetOptionPacket.MYSQL_OPTION_MULTI_STATEMENTS_ON == connectionSession.getAttributeMap().attr(MySQLConstants.OPTION_MULTI_STATEMENTS_ATTRIBUTE_KEY).get()
                 && packet.getSQL().contains(";")) {
             throw new UnsupportedPreparedStatementException();
         }
@@ -108,8 +108,8 @@ public final class MySQLComStmtPrepareExecutor implements CommandExecutor {
         int parameterCount = sqlStatementContext.getSqlStatement().getParameterCount();
         ShardingSpherePreconditions.checkState(parameterCount <= MAX_PARAMETER_COUNT, TooManyPlaceholdersException::new);
         result.add(new MySQLComStmtPrepareOKPacket(statementId, projections.size(), parameterCount, 0));
-        int characterSet = connectionSession.getAttributeMap().attr(MySQLConstants.MYSQL_CHARACTER_SET_ATTRIBUTE_KEY).get().getId();
-        int statusFlags = ServerStatusFlagCalculator.calculateFor(connectionSession);
+        int characterSet = connectionSession.getAttributeMap().attr(MySQLConstants.CHARACTER_SET_ATTRIBUTE_KEY).get().getId();
+        int statusFlags = ServerStatusFlagCalculator.calculateFor(connectionSession, true);
         if (parameterCount > 0) {
             result.addAll(createParameterColumnDefinition41Packets(sqlStatementContext, characterSet, serverPreparedStatement));
             result.add(new MySQLEofPacket(statusFlags));
@@ -133,7 +133,10 @@ public final class MySQLComStmtPrepareExecutor implements CommandExecutor {
         Collection<MySQLPacket> result = new ArrayList<>(parameterMarkerSegments.size());
         Collection<Integer> paramColumnDefinitionFlags = new ArrayList<>(parameterMarkerSegments.size());
         for (int index = 0; index < parameterMarkerSegments.size(); index++) {
-            ShardingSphereColumn column = columnsOfParameterMarkers.isEmpty() ? null : columnsOfParameterMarkers.get(index);
+            ShardingSphereColumn column = null;
+            if (!columnsOfParameterMarkers.isEmpty() && index < columnsOfParameterMarkers.size()) {
+                column = columnsOfParameterMarkers.get(index);
+            }
             if (null != column) {
                 int columnDefinitionFlag = calculateColumnDefinitionFlag(column);
                 result.add(createMySQLColumnDefinition41Packet(characterSet, columnDefinitionFlag, MySQLBinaryColumnType.valueOfJDBCType(column.getDataType())));
@@ -155,7 +158,7 @@ public final class MySQLComStmtPrepareExecutor implements CommandExecutor {
             // TODO Calculate column definition flag for other projection types
             if (each instanceof ColumnProjection) {
                 result.add(Optional.ofNullable(schema.getTable(((ColumnProjection) each).getOriginalTable().getValue()))
-                        .map(table -> table.getColumns().get(((ColumnProjection) each).getOriginalColumn().getValue()))
+                        .map(table -> table.getColumn(((ColumnProjection) each).getOriginalColumn().getValue()))
                         .map(column -> createMySQLColumnDefinition41Packet(characterSet, calculateColumnDefinitionFlag(column), MySQLBinaryColumnType.valueOfJDBCType(column.getDataType())))
                         .orElseGet(() -> createMySQLColumnDefinition41Packet(characterSet, 0, MySQLBinaryColumnType.VAR_STRING)));
             } else {

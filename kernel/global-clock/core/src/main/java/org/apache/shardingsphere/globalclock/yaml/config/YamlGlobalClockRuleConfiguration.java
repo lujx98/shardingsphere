@@ -21,7 +21,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.shardingsphere.globalclock.config.GlobalClockRuleConfiguration;
 import org.apache.shardingsphere.infra.yaml.config.pojo.rule.YamlGlobalRuleConfiguration;
-import org.apache.shardingsphere.mode.tuple.annotation.RepositoryTupleEntity;
+import org.apache.shardingsphere.mode.node.tuple.annotation.RepositoryTupleEntity;
 
 import java.util.Properties;
 
@@ -39,7 +39,7 @@ public final class YamlGlobalClockRuleConfiguration implements YamlGlobalRuleCon
     
     private boolean enabled;
     
-    private Properties props;
+    private Properties props = new Properties();
     
     @Override
     public Class<GlobalClockRuleConfiguration> getRuleConfigurationType() {

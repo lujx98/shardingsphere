@@ -122,6 +122,15 @@ public final class SQLFederationEngine implements AutoCloseable {
     }
     
     /**
+     * SQL federation enabled or not.
+     *
+     * @return enabled or not
+     */
+    public boolean enabled() {
+        return sqlFederationRule.getConfiguration().isSqlFederationEnabled();
+    }
+    
+    /**
      * Decide use SQL federation or not.
      *
      * @param queryContext query context
@@ -188,7 +197,8 @@ public final class SQLFederationEngine implements AutoCloseable {
             String schemaName = selectStatementContext.getTablesContext().getSchemaName().orElse(currentSchemaName);
             OptimizerMetaData optimizerMetaData = sqlFederationRule.getOptimizerContext().getMetaData(databaseName);
             CalciteConnectionConfig connectionConfig = new CalciteConnectionConfigImpl(sqlFederationRule.getOptimizerContext().getParserContext(databaseName).getDialectProps());
-            CalciteCatalogReader catalogReader = SQLFederationPlannerUtils.createCatalogReader(schemaName, optimizerMetaData.getSchema(schemaName), DEFAULT_DATA_TYPE_FACTORY, connectionConfig);
+            CalciteCatalogReader catalogReader = SQLFederationPlannerUtils.createCatalogReader(schemaName, optimizerMetaData.getSchema(schemaName), DEFAULT_DATA_TYPE_FACTORY, connectionConfig,
+                    selectStatementContext.getDatabaseType());
             SqlValidator validator = SQLFederationPlannerUtils.createSqlValidator(catalogReader, DEFAULT_DATA_TYPE_FACTORY,
                     sqlFederationRule.getOptimizerContext().getParserContext(databaseName).getDatabaseType(), connectionConfig);
             SqlToRelConverter converter = SQLFederationPlannerUtils.createSqlToRelConverter(catalogReader, validator, SQLFederationPlannerUtils.createRelOptCluster(DEFAULT_DATA_TYPE_FACTORY),
@@ -256,7 +266,7 @@ public final class SQLFederationEngine implements AutoCloseable {
         EnumerableScanExecutor scanExecutor =
                 new EnumerableScanExecutor(prepareEngine, jdbcExecutor, callback, optimizerContext, executorContext, federationContext, metaData.getGlobalRuleMetaData(), statistics);
         // TODO register only the required tables
-        for (ShardingSphereTable each : metaData.getDatabase(databaseName).getSchema(schemaName).getTables().values()) {
+        for (ShardingSphereTable each : metaData.getDatabase(databaseName).getSchema(schemaName).getAllTables()) {
             Table table = sqlFederationSchema.getTable(each.getName());
             if (table instanceof SQLFederationTable) {
                 ((SQLFederationTable) table).setScanExecutor(scanExecutor);

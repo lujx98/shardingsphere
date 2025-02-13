@@ -24,27 +24,27 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
+import java.util.Map;
 
 /**
  * Sharding statistics table data collector of openGauss.
  */
 public final class OpenGaussShardingStatisticsTableCollector implements DialectShardingStatisticsTableCollector {
     
-    private static final String OPENGAUSS_TABLE_ROWS_AND_DATA_LENGTH = "SELECT RELTUPLES AS TABLE_ROWS, PG_TABLE_SIZE(?) AS DATA_LENGTH FROM PG_CLASS WHERE RELNAME = ?";
+    private static final String FETCH_TABLE_ROWS_AND_DATA_LENGTH_SQL = "SELECT RELTUPLES AS TABLE_ROWS, PG_TABLE_SIZE(?) AS DATA_LENGTH FROM PG_CLASS WHERE RELNAME = ?";
     
     @Override
-    public boolean appendRow(final Connection connection, final DataNode dataNode, final List<Object> row) throws SQLException {
+    public boolean appendRow(final Connection connection, final DataNode dataNode, final Map<String, Object> rowColumnValues) throws SQLException {
         if (!isTableExist(connection, dataNode.getTableName())) {
             return false;
         }
-        try (PreparedStatement preparedStatement = connection.prepareStatement(OPENGAUSS_TABLE_ROWS_AND_DATA_LENGTH)) {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(FETCH_TABLE_ROWS_AND_DATA_LENGTH_SQL)) {
             preparedStatement.setString(1, dataNode.getTableName());
             preparedStatement.setString(2, dataNode.getTableName());
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    row.add(resultSet.getBigDecimal(TABLE_ROWS_COLUMN_NAME));
-                    row.add(resultSet.getBigDecimal(DATA_LENGTH_COLUMN_NAME));
+                    rowColumnValues.put("row_count", resultSet.getBigDecimal(TABLE_ROWS_COLUMN_NAME));
+                    rowColumnValues.put("size", resultSet.getBigDecimal(DATA_LENGTH_COLUMN_NAME));
                     return true;
                 }
             }

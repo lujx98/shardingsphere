@@ -17,8 +17,10 @@
 
 package org.apache.shardingsphere.broadcast.metadata.nodepath;
 
-import org.apache.shardingsphere.mode.path.rule.RuleNodePath;
-import org.apache.shardingsphere.mode.spi.RuleNodePathProvider;
+import org.apache.shardingsphere.broadcast.config.BroadcastRuleConfiguration;
+import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
+import org.apache.shardingsphere.mode.node.path.config.database.DatabaseRuleNodePath;
+import org.apache.shardingsphere.mode.node.spi.DatabaseRuleNodePathProvider;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -27,13 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BroadcastRuleNodePathProviderTest {
     
+    private final DatabaseRuleNodePathProvider pathProvider = TypedSPILoader.getService(DatabaseRuleNodePathProvider.class, BroadcastRuleConfiguration.class);
+    
     @Test
-    void assertNew() {
-        RuleNodePathProvider ruleNodePathProvider = new BroadcastRuleNodePathProvider();
-        RuleNodePath actualRuleNodePath = ruleNodePathProvider.getRuleNodePath();
-        assertTrue(actualRuleNodePath.getNamedItems().isEmpty());
-        assertThat(actualRuleNodePath.getUniqueItems().size(), is(1));
-        assertTrue(actualRuleNodePath.getUniqueItems().containsKey(BroadcastRuleNodePathProvider.TABLES));
-        assertThat(actualRuleNodePath.getRoot().getRuleType(), is(BroadcastRuleNodePathProvider.RULE_TYPE));
+    void assertGetDatabaseRuleNodePath() {
+        DatabaseRuleNodePath actual = pathProvider.getDatabaseRuleNodePath();
+        assertTrue(actual.getNamedItems().isEmpty());
+        assertThat(actual.getUniqueItems().size(), is(1));
+        assertTrue(actual.getUniqueItems().containsKey(BroadcastRuleNodePathProvider.TABLES));
+        assertThat(actual.getRoot().getRuleType(), is(BroadcastRuleNodePathProvider.RULE_TYPE));
     }
 }

@@ -31,6 +31,7 @@ authority:
   users:
     - user: proxy
       password: Proxy@123
+      admin: true
   privilege:
     type: ALL_PERMITTED
 
@@ -41,7 +42,7 @@ sqlFederation:
     maximumSize: 65535
 
 props:
-  system-schema-metadata-enabled: false
+  system-schema-metadata-assembly-enabled: false
   max-connections-size-per-query: 1
   kernel-executor-size: 16  # Infinite by default.
   proxy-frontend-flush-threshold: 128  # The default value is 128.

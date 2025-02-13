@@ -18,30 +18,23 @@
 package org.apache.shardingsphere.schedule.core.job.statistics.collect;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.elasticjob.api.ShardingContext;
 import org.apache.shardingsphere.elasticjob.simple.job.SimpleJob;
-import org.apache.shardingsphere.mode.lock.GlobalLockContext;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.mode.manager.cluster.lock.GlobalLockPersistService;
-import org.apache.shardingsphere.mode.metadata.refresher.ShardingSphereStatisticsRefreshEngine;
-import org.apache.shardingsphere.mode.repository.cluster.ClusterPersistRepository;
-import org.apache.shardingsphere.mode.spi.PersistRepository;
+import org.apache.shardingsphere.mode.metadata.refresher.statistics.StatisticsRefreshEngine;
 
 /**
  * Statistics collect job.
  */
 @RequiredArgsConstructor
-@Slf4j
 public final class StatisticsCollectJob implements SimpleJob {
     
     private final ContextManager contextManager;
     
     @Override
     public void execute(final ShardingContext shardingContext) {
-        PersistRepository repository = contextManager.getPersistServiceFacade().getRepository();
-        if (repository instanceof ClusterPersistRepository) {
-            new ShardingSphereStatisticsRefreshEngine(contextManager, new GlobalLockContext(new GlobalLockPersistService((ClusterPersistRepository) repository))).refresh();
+        if (contextManager.getComputeNodeInstanceContext().getModeConfiguration().isCluster()) {
+            new StatisticsRefreshEngine(contextManager).refresh();
         }
     }
 }

@@ -9,6 +9,21 @@
   }, {
     "condition":{"typeReachable":"org.apache.shardingsphere.mode.repository.standalone.jdbc.sql.JDBCRepositorySQLLoader"},
     "pattern":".*sql/.+\\.xml$"
+  }, {
+    "condition":{"typeReachable":"javax.xml.parsers.FactoryFinder"},
+    "pattern":"\\QMETA-INF/services/javax.xml.parsers.SAXParserFactory\\E"
   }]},
-  "bundles":[]
+  "bundles":[{
+    "name":"com.sun.org.apache.xml.internal.serializer.XMLEntities",
+    "locales":["en"]
+  }, {
+    "name":"com.microsoft.sqlserver.jdbc.SQLServerResource",
+    "locales":["en"]
+  }, {
+    "name":"org.postgresql.translation.messages",
+    "locales":["en"]
+  }, {
+    "name":"org.opengauss.translation.messages",
+    "locales":["en", "zh"]
+  }]
 }
